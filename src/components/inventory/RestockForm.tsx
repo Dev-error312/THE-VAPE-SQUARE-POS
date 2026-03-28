@@ -19,11 +19,21 @@ const PAYMENT_TYPES = [
   { id: 'partial', label: 'Partial',      desc: 'Part now' },
 ] as const
 
-const RESET = (product: Product) => ({
+type FormState = {
+  quantity: string
+  cost_price: string
+  selling_price: string
+  payment_type: 'full' | 'credit' | 'partial'
+  paid_amount: string
+  notes: string
+  received_at: string
+}
+
+const RESET = (product: Product): FormState => ({
   quantity: '',
   cost_price: '',
   selling_price: String(product.selling_price || ''),
-  payment_type: 'full' as const,
+  payment_type: 'full',
   paid_amount: '',
   notes: '',
   received_at: new Date().toISOString().slice(0, 10),
@@ -31,14 +41,14 @@ const RESET = (product: Product) => ({
 
 export default function RestockForm({ isOpen, onClose, product, onRestocked }: RestockFormProps) {
   const { user } = useAuthStore()
-  const [form, setForm] = useState(RESET(product))
+  const [form, setForm] = useState<FormState>(RESET(product))
   const [loading, setLoading] = useState(false)
 
   useEffect(() => {
     if (isOpen) setForm(RESET(product))
-  }, [isOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isOpen, product])
 
-  const set = (field: string, value: string) => setForm(f => ({ ...f, [field]: value }))
+  const set = (field: string, value: string | number) => setForm(f => ({ ...f, [field]: value }))
 
   const qty        = parseInt(form.quantity) || 0
   const cost       = parseFloat(form.cost_price) || 0
