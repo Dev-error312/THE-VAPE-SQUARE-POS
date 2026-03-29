@@ -25,11 +25,9 @@ export const suppliersApi = {
     if (error) throw new Error(`Failed to delete supplier: ${error.message}`)
   },
 
-  // Find supplier by name (case-insensitive). If not found, create and return.
   async findOrCreate(name: string): Promise<Supplier> {
     const trimmed = name.trim()
     if (!trimmed) throw new Error('Supplier name cannot be empty')
-    // Check existing (ilike = case-insensitive)
     const { data: existing } = await supabase
       .from('suppliers')
       .select('id, name, phone, address, created_at')
@@ -37,7 +35,6 @@ export const suppliersApi = {
       .limit(1)
       .single()
     if (existing) return existing as Supplier
-    // Not found — create new
     const { data, error } = await supabase
       .from('suppliers')
       .insert({ name: trimmed })
@@ -54,7 +51,6 @@ export const categoriesApi = {
     const { data, error } = await supabase.from('categories').select('*').order('name')
     if (error) throw new Error(`Categories fetch failed: ${error.message}`)
     const cats = data || []
-    // Sort A→Z but always push "Others" / "Other" / "अन्य" to the end
     const OTHERS = ['others', 'other', 'अन्य']
     const main = cats.filter(c => !OTHERS.includes(c.name.toLowerCase()))
     const others = cats.filter(c => OTHERS.includes(c.name.toLowerCase()))
@@ -182,6 +178,25 @@ export const batchesApi = {
   },
 }
 
+// ─── Restock Record (return type for getRestockHistory) ────────────────────
+export interface RestockRecord {
+  id: string
+  product_name: string
+  supplier_name: string | null
+  /** Actual quantity received — from inventory_batches if linked, else purchases.quantity */
+  quantity: number
+  /** Cost price per unit at time of restock */
+  cost_price: number
+  /** quantity × cost_price */
+  total_amount: number
+  paid_amount: number
+  remaining_amount: number
+  payment_type: 'full' | 'credit' | 'partial'
+  /** Date the stock was physically received */
+  received_at: string
+  created_at: string
+}
+
 // ─── Purchases ─────────────────────────────────────────────────────────────
 export const purchasesApi = {
   async getAll(): Promise<import('../types').Purchase[]> {
@@ -208,8 +223,6 @@ export const purchasesApi = {
     notes?: string
     created_by?: string
   }): Promise<import('../types').Purchase> {
-    // original_payment_type locks in the initial type so we can always
-    // identify credit/partial records even after full payment
     const payload = {
       ...purchase,
       original_payment_type: purchase.payment_type,
@@ -220,11 +233,13 @@ export const purchasesApi = {
   },
 
   async recordPayment(id: string, additionalPayment: number): Promise<void> {
-    const { data: purchase } = await supabase.from('purchases').select('paid_amount, total_amount').eq('id', id).single()
+    const { data: purchase } = await supabase
+      .from('purchases').select('paid_amount, total_amount').eq('id', id).single()
     if (!purchase) throw new Error('Purchase not found')
     const newPaid = Math.min(purchase.paid_amount + additionalPayment, purchase.total_amount)
     const newType = newPaid >= purchase.total_amount ? 'full' : 'partial'
-    const { error } = await supabase.from('purchases').update({ paid_amount: newPaid, payment_type: newType }).eq('id', id)
+    const { error } = await supabase
+      .from('purchases').update({ paid_amount: newPaid, payment_type: newType }).eq('id', id)
     if (error) throw new Error(`Failed to record payment: ${error.message}`)
   },
 
@@ -232,7 +247,7 @@ export const purchasesApi = {
     startDate?: string
     endDate?: string
     supplierId?: string
-    creditOnly?: boolean   // if true, only show records that were originally credit/partial
+    creditOnly?: boolean
   }): Promise<import('../types').Purchase[]> {
     let query = supabase
       .from('purchases')
@@ -241,12 +256,72 @@ export const purchasesApi = {
     if (params.startDate)  query = query.gte('created_at', params.startDate + 'T00:00:00.000Z')
     if (params.endDate)    query = query.lte('created_at', params.endDate + 'T23:59:59.999Z')
     if (params.supplierId) query = query.eq('supplier_id', params.supplierId)
-    if (params.creditOnly) {
-      // Show only purchases that were originally credit or partial
-      query = query.in('original_payment_type', ['credit', 'partial'])
-    }
+    if (params.creditOnly) query = query.in('original_payment_type', ['credit', 'partial'])
     const { data, error } = await query
     if (error) throw new Error(`Purchases fetch failed: ${error.message}`)
     return (data || []).map(p => ({ ...p, supplier: p.suppliers, product: p.products }))
+  },
+
+  /**
+   * Restock History — every purchase linked to an inventory batch.
+   * Joins: purchases → products, suppliers, inventory_batches
+   * Used exclusively by the Reports → Restocks tab.
+   */
+  async getRestockHistory(params?: {
+    startDate?: string
+    endDate?: string
+  }): Promise<RestockRecord[]> {
+    let query = supabase
+      .from('purchases')
+      .select(`
+        id,
+        quantity,
+        total_amount,
+        paid_amount,
+        payment_type,
+        created_at,
+        suppliers ( id, name ),
+        products  ( id, name ),
+        inventory_batches ( quantity_received, cost_price, received_at )
+      `)
+      .order('created_at', { ascending: false })
+
+    if (params?.startDate) {
+      query = query.gte('created_at', params.startDate + 'T00:00:00.000Z')
+    }
+    if (params?.endDate) {
+      query = query.lte('created_at', params.endDate + 'T23:59:59.999Z')
+    }
+
+    const { data, error } = await query
+    if (error) throw new Error(`Restock history fetch failed: ${error.message}`)
+
+    return (data || []).map(p => {
+      // Supabase returns single FK relations as objects (not arrays)
+      const batch = p.inventory_batches as {
+        quantity_received: number
+        cost_price: number
+        received_at: string
+      } | null
+
+      const costPerUnit  = batch?.cost_price  ?? 0
+      const qty          = batch?.quantity_received ?? p.quantity
+      const receivedAt   = batch?.received_at  ?? p.created_at
+      const remaining    = round2(Math.max(0, p.total_amount - p.paid_amount))
+
+      return {
+        id:               p.id,
+        product_name:     (p.products  as { name: string } | null)?.name ?? 'Unknown Product',
+        supplier_name:    (p.suppliers as { name: string } | null)?.name ?? null,
+        quantity:         qty,
+        cost_price:       costPerUnit,
+        total_amount:     p.total_amount,
+        paid_amount:      p.paid_amount,
+        remaining_amount: remaining,
+        payment_type:     p.payment_type as 'full' | 'credit' | 'partial',
+        received_at:      receivedAt,
+        created_at:       p.created_at,
+      }
+    })
   },
 }
