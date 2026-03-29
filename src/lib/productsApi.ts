@@ -298,7 +298,7 @@ export const purchasesApi = {
 
     return (data || []).map(p => {
       // Supabase returns single FK relations as objects (not arrays)
-      const batch = p.inventory_batches as {
+      const batch = (Array.isArray(p.inventory_batches) ? p.inventory_batches[0] : p.inventory_batches) as {
         quantity_received: number
         cost_price: number
         received_at: string
@@ -311,8 +311,8 @@ export const purchasesApi = {
 
       return {
         id:               p.id,
-        product_name:     (p.products  as { name: string } | null)?.name ?? 'Unknown Product',
-        supplier_name:    (p.suppliers as { name: string } | null)?.name ?? null,
+        product_name:     ((Array.isArray(p.products) ? p.products[0] : p.products) as { name: string } | null)?.name ?? 'Unknown Product',
+        supplier_name:    ((Array.isArray(p.suppliers) ? p.suppliers[0] : p.suppliers) as { name: string } | null)?.name ?? null,
         quantity:         qty,
         cost_price:       costPerUnit,
         total_amount:     p.total_amount,
