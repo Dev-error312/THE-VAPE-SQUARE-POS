@@ -375,7 +375,7 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
                       <div style={{ fontWeight: 'bold' }}>{item.product.name}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>{item.quantity} × रु {item.unit_price}</span>
-                        <span style={{ textDecoration: itemDiscount > 0 ? 'line-through' : 'none', color: '#888' }}>
+                        <span style={{ color: '#888' }}>
                           रु {listPrice}
                         </span>
                       </div>
