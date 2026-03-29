@@ -19,8 +19,14 @@ export default function App() {
   const initialize = useAuthStore(s => s.initialize)
   useEffect(() => { initialize() }, [initialize])
 
+  /** Standard protected route — any authenticated user */
   const wrap = (child: React.ReactNode) => (
     <ProtectedRoute><Layout>{child}</Layout></ProtectedRoute>
+  )
+
+  /** Admin-only protected route — redirects cashiers to /dashboard */
+  const adminWrap = (child: React.ReactNode) => (
+    <ProtectedRoute adminOnly><Layout>{child}</Layout></ProtectedRoute>
   )
 
   return (
@@ -40,10 +46,11 @@ export default function App() {
         <Route path="/pos"       element={wrap(<POSPage />)} />
         <Route path="/inventory" element={wrap(<InventoryPage />)} />
         <Route path="/reports"   element={wrap(<ReportsPage />)} />
-        <Route path="/analytics" element={wrap(<AnalyticsPage />)} />
-        <Route path="/expenses"  element={wrap(<ExpensesPage />)} />
-        <Route path="/credits"   element={wrap(<CreditsPage />)} />
         <Route path="/wholesale" element={wrap(<WholesalePage />)} />
+        <Route path="/expenses"  element={wrap(<ExpensesPage />)} />
+        {/* Admin-only routes — cashiers are redirected to /dashboard */}
+        <Route path="/analytics" element={adminWrap(<AnalyticsPage />)} />
+        <Route path="/credits"   element={adminWrap(<CreditsPage />)} />
         <Route path="*"          element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>

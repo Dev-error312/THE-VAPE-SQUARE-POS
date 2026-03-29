@@ -18,6 +18,7 @@ async function getOrCreateUser(authUser: {
   user_metadata?: Record<string, string>
   created_at: string
 }): Promise<User> {
+
   const fallback: User = {
     id: authUser.id,
     email: authUser.email ?? '',
@@ -25,13 +26,34 @@ async function getOrCreateUser(authUser: {
     role: 'cashier',
     created_at: authUser.created_at,
   }
+
   try {
-    await supabase.from('users').upsert(
-      { id: authUser.id, email: authUser.email ?? '', full_name: authUser.user_metadata?.full_name ?? '', role: 'cashier' },
-      { onConflict: 'id' }
-    )
-    const { data } = await supabase.from('users').select('*').eq('id', authUser.id).single()
+    // 🔍 Check if user already exists
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', authUser.id)
+      .single()
+
+    // 🆕 If NOT exists → create with default role
+    if (!existingUser) {
+      await supabase.from('users').insert({
+        id: authUser.id,
+        email: authUser.email ?? '',
+        full_name: authUser.user_metadata?.full_name ?? '',
+        role: 'cashier',
+      })
+    }
+
+    // 📦 Always fetch latest user data
+    const { data } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', authUser.id)
+      .single()
+
     return (data as User) ?? fallback
+
   } catch {
     return fallback
   }

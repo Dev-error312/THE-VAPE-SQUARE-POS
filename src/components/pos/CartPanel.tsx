@@ -1,4 +1,5 @@
 import { useCartStore } from '../../store/cartStore'
+import { useIsAdmin } from '../../hooks/useRole'
 import { formatCurrency } from '../../utils'
 import { Trash2, Plus, Minus, ShoppingCart, X } from 'lucide-react'
 
@@ -12,6 +13,8 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
     setEnteredAmount, getItemEnteredAmount, getItemDiscount, getItemProfit,
     getSubtotal, getDiscountAmount, getTotal,
   } = useCartStore()
+
+  const isAdmin = useIsAdmin()
 
   const subtotal       = getSubtotal()
   const discountAmount = getDiscountAmount()
@@ -44,7 +47,7 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
           <div className="flex flex-col items-center justify-center h-48 text-slate-600 select-none">
             <ShoppingCart className="w-12 h-12 mb-3 opacity-20" />
             <p className="text-sm font-medium">Cart is empty</p>
-            <p className="text-xs mt-1 opacity-70">Click products to add</p>
+            <p className="text-xs mt-1 opacity-70">Tap products to add</p>
           </div>
         ) : (
           <div className="divide-y divide-slate-800">
@@ -68,7 +71,7 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                       </p>
                     </div>
                     <button onClick={() => removeItem(item.product.id)}
-                      className="text-slate-600 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5">
+                      className="text-slate-600 hover:text-red-400 transition-colors flex-shrink-0 mt-0.5 p-1">
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -77,7 +80,7 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                      className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors border border-slate-700">
+                      className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors border border-slate-700">
                       <Minus className="w-3 h-3 text-slate-300" />
                     </button>
                     <input
@@ -93,15 +96,15 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                     <button
                       onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                       disabled={item.quantity >= (item.product.total_stock || 0)}
-                      className="w-7 h-7 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                      className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed">
                       <Plus className="w-3 h-3 text-slate-300" />
                     </button>
                     <span className="text-xs text-slate-600 ml-1">
-                      {item.product.total_stock || 0} in stock
+                      {item.product.total_stock || 0} left
                     </span>
                   </div>
 
-                  {/* ── Entered Amount (cashier flow) ── */}
+                  {/* Amount received input */}
                   <div className="bg-slate-800/60 rounded-lg p-2.5 space-y-1.5">
                     <div className="flex items-center gap-2">
                       <label className="text-xs text-slate-400 whitespace-nowrap">Amount Received</label>
@@ -118,7 +121,6 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                           className="w-full pl-8 pr-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm font-mono text-white focus:border-primary-500 focus:outline-none"
                         />
                       </div>
-                      {/* Quick: set to full list price */}
                       {itemDiscount > 0 && (
                         <button
                           onClick={() => setEnteredAmount(item.product.id, listPrice)}
@@ -128,14 +130,16 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                       )}
                     </div>
 
-                    {/* Auto-calculated discount + profit */}
+                    {/* Discount always visible; profit only for admin */}
                     <div className="flex justify-between text-xs">
-                      <span className={`${itemDiscount > 0 ? 'text-amber-400' : 'text-slate-600'}`}>
+                      <span className={itemDiscount > 0 ? 'text-amber-400' : 'text-slate-600'}>
                         {itemDiscount > 0 ? `Discount: −${formatCurrency(itemDiscount)}` : 'No discount'}
                       </span>
-                      <span className={`font-mono font-medium ${itemProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        Profit: {formatCurrency(itemProfit)}
-                      </span>
+                      {isAdmin && (
+                        <span className={`font-mono font-medium ${itemProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                          Profit: {formatCurrency(itemProfit)}
+                        </span>
+                      )}
                     </div>
                   </div>
 

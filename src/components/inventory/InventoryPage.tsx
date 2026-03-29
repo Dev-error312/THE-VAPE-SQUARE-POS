@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { productsApi, categoriesApi, suppliersApi } from '../../lib/productsApi'
+import { useIsAdmin } from '../../hooks/useRole'
 import type { Product, Category, Supplier } from '../../types'
 import { formatCurrency } from '../../utils'
 import {
@@ -16,20 +17,22 @@ type SortKey = 'name' | 'category_name' | 'supplier_name' | 'total_stock' | 'avg
 type SortDir = 'asc' | 'desc'
 
 export default function InventoryPage() {
-  const [products, setProducts]   = useState<Product[]>([])
+  const [products, setProducts]     = useState<Product[]>([])
   const [categories, setCategories] = useState<Category[]>([])
-  const [suppliers, setSuppliers]  = useState<Supplier[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [search, setSearch]       = useState('')
+  const [suppliers, setSuppliers]   = useState<Supplier[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [search, setSearch]         = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [supplierFilter, setSupplierFilter] = useState('')
-  const [sortKey, setSortKey]     = useState<SortKey>('name')
-  const [sortDir, setSortDir]     = useState<SortDir>('asc')
+  const [sortKey, setSortKey]       = useState<SortKey>('name')
+  const [sortDir, setSortDir]       = useState<SortDir>('asc')
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
-  const [showProductForm, setShowProductForm]   = useState(false)
-  const [showRestockForm, setShowRestockForm]   = useState(false)
+  const [showProductForm, setShowProductForm] = useState(false)
+  const [showRestockForm, setShowRestockForm] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  const isAdmin = useIsAdmin()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -52,14 +55,13 @@ export default function InventoryPage() {
     else { setSortKey(key); setSortDir('asc') }
   }
 
-  // ── Filtered + sorted product list ────────────────────────────────────────
   const filtered = useMemo(() => {
     const q = search.toLowerCase()
     return products
       .filter(p => {
         const matchSearch = !q || p.name.toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q)
-        const matchCat = !categoryFilter || p.category_id === categoryFilter
-        const matchSup = !supplierFilter || p.supplier_id === supplierFilter
+        const matchCat    = !categoryFilter || p.category_id === categoryFilter
+        const matchSup    = !supplierFilter || p.supplier_id === supplierFilter
         return matchSearch && matchCat && matchSup
       })
       .sort((a, b) => {
@@ -73,7 +75,6 @@ export default function InventoryPage() {
       })
   }, [products, search, categoryFilter, supplierFilter, sortKey, sortDir])
 
-  // ── Totals — react to filter changes automatically ─────────────────────────
   const totals = useMemo(() => {
     const qty        = filtered.reduce((s, p) => s + (p.total_stock || 0), 0)
     const stockValue = filtered.reduce((s, p) => s + (p.total_stock || 0) * (p.avg_cost || 0), 0)
@@ -119,17 +120,26 @@ export default function InventoryPage() {
     </th>
   )
 
+  // Column count changes based on role (for colSpan calculations)
+  // Admin:   Name, Brand, Category, Supplier, Stock, Cost, StockValue, SellPrice, Status, Actions = 10
+  // Cashier: Name, Brand, Category,           Stock,                   SellPrice, Status, Actions = 7
+  const colCount = isAdmin ? 10 : 7
+
   return (
-    <div className="p-6 space-y-5">
-      <div className="flex items-center justify-between">
+    <div className="p-4 sm:p-6 space-y-5">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-white">Inventory</h1>
           <p className="text-slate-400 text-sm mt-0.5">Manage products and stock levels</p>
         </div>
-        <button onClick={() => { setSelectedProduct(null); setShowProductForm(true) }}
-          className="btn-primary flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Add Product
-        </button>
+        {isAdmin && (
+          <button onClick={() => { setSelectedProduct(null); setShowProductForm(true) }}
+            className="btn-primary flex items-center gap-2 flex-shrink-0">
+            <Plus className="w-4 h-4" />
+            <span className="hidden sm:inline">Add Product</span>
+            <span className="sm:hidden">Add</span>
+          </button>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -163,10 +173,12 @@ export default function InventoryPage() {
           <option value="">All Categories</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
         </select>
-        <select className="input sm:w-44" value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)}>
-          <option value="">All Suppliers</option>
-          {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+        {isAdmin && (
+          <select className="input sm:w-44" value={supplierFilter} onChange={e => setSupplierFilter(e.target.value)}>
+            <option value="">All Suppliers</option>
+            {suppliers.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        )}
         <button onClick={load} className="btn-secondary flex items-center gap-2 flex-shrink-0">
           <RefreshCw className="w-4 h-4" /> Refresh
         </button>
@@ -183,16 +195,18 @@ export default function InventoryPage() {
             <table className="w-full">
               <thead className="border-b border-slate-700/60 bg-slate-800/50">
                 <tr>
-                  <Th label="Product Name"   k="name" />
-                  <Th label="Brand"          k="name" />
-                  <Th label="Category"       k="category_name" />
-                  <Th label="Supplier"       k="supplier_name" />
-                  <Th label="Stock"          k="total_stock"   right />
-                  <Th label="Cost Price"     k="avg_cost"      right />
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide whitespace-nowrap">
-                    Stock Value
-                  </th>
-                  <Th label="Selling Price"  k="selling_price" right />
+                  <Th label="Product Name" k="name" />
+                  <Th label="Brand"        k="name" />
+                  <Th label="Category"     k="category_name" />
+                  {isAdmin && <Th label="Supplier"   k="supplier_name" />}
+                  <Th label="Stock"        k="total_stock"   right />
+                  {isAdmin && <Th label="Cost Price" k="avg_cost"      right />}
+                  {isAdmin && (
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide whitespace-nowrap">
+                      Stock Value
+                    </th>
+                  )}
+                  <Th label="Selling Price" k="selling_price" right />
                   <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</th>
                   <th className="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide">Actions</th>
                 </tr>
@@ -200,7 +214,7 @@ export default function InventoryPage() {
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={10} className="text-center py-16 text-slate-500">
+                    <td colSpan={colCount} className="text-center py-16 text-slate-500">
                       <Package className="w-10 h-10 mx-auto mb-3 opacity-20" />
                       <p className="text-sm">
                         {search || categoryFilter || supplierFilter
@@ -212,29 +226,34 @@ export default function InventoryPage() {
                 ) : filtered.map(product => {
                   const stock      = product.total_stock || 0
                   const costPrice  = product.avg_cost || 0
-                  const stockValue = stock * costPrice        // ← Stock Value (Cost)
+                  const stockValue = stock * costPrice
                   const status     = stockStatus(stock)
                   return (
                     <tr key={product.id} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
                       <td className="px-4 py-3">
-                        <p className="font-medium text-slate-200 text-sm">{product.name}</p>
+                        <p className="font-medium text-slate-200 text-sm truncate max-w-[160px]">{product.name}</p>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-400">{product.brand || <span className="text-slate-600">—</span>}</td>
-                      <td className="px-4 py-3 text-sm text-slate-400">{product.category_name || <span className="text-slate-600">—</span>}</td>
-                      <td className="px-4 py-3 text-sm text-slate-400">{product.supplier_name || <span className="text-slate-600">—</span>}</td>
+                      <td className="px-4 py-3 text-sm text-slate-400 max-w-[100px] truncate">{product.brand || <span className="text-slate-600">—</span>}</td>
+                      <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">{product.category_name || <span className="text-slate-600">—</span>}</td>
+                      {isAdmin && (
+                        <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">{product.supplier_name || <span className="text-slate-600">—</span>}</td>
+                      )}
                       <td className="px-4 py-3 text-right">
                         <span className={`font-bold font-mono text-sm ${stock === 0 ? 'text-red-400' : stock < 10 ? 'text-amber-400' : 'text-white'}`}>
                           {stock}
                         </span>
                         <span className="text-xs text-slate-500 ml-1">{product.unit}</span>
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
-                        {costPrice > 0 ? formatCurrency(costPrice) : <span className="text-slate-600">—</span>}
-                      </td>
-                      {/* Stock Value = qty × cost_price */}
-                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
-                        {stockValue > 0 ? formatCurrency(stockValue) : <span className="text-slate-600">—</span>}
-                      </td>
+                      {isAdmin && (
+                        <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
+                          {costPrice > 0 ? formatCurrency(costPrice) : <span className="text-slate-600">—</span>}
+                        </td>
+                      )}
+                      {isAdmin && (
+                        <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
+                          {stockValue > 0 ? formatCurrency(stockValue) : <span className="text-slate-600">—</span>}
+                        </td>
+                      )}
                       <td className="px-4 py-3 text-right font-mono font-semibold text-white text-sm">
                         {formatCurrency(product.selling_price)}
                       </td>
@@ -247,14 +266,18 @@ export default function InventoryPage() {
                             title="Restock" className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-400 hover:bg-emerald-500/10 transition-all">
                             <RefreshCw className="w-4 h-4" />
                           </button>
-                          <button onClick={() => { setSelectedProduct(product); setShowProductForm(true) }}
-                            title="Edit" className="p-1.5 rounded-lg text-slate-500 hover:text-primary-400 hover:bg-primary-500/10 transition-all">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => { setSelectedProduct(product); setShowDeleteConfirm(true) }}
-                            title="Archive" className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {isAdmin && (
+                            <>
+                              <button onClick={() => { setSelectedProduct(product); setShowProductForm(true) }}
+                                title="Edit" className="p-1.5 rounded-lg text-slate-500 hover:text-primary-400 hover:bg-primary-500/10 transition-all">
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => { setSelectedProduct(product); setShowDeleteConfirm(true) }}
+                                title="Archive" className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -262,8 +285,8 @@ export default function InventoryPage() {
                 })}
               </tbody>
 
-              {/* ── Dynamic totals footer — updates with every filter change ── */}
-              {!loading && filtered.length > 0 && (
+              {/* Footer totals — admin only (contains cost-based figures) */}
+              {!loading && filtered.length > 0 && isAdmin && (
                 <tfoot>
                   <tr className="border-t-2 border-slate-600 bg-slate-800/70 font-semibold">
                     <td className="px-4 py-3 text-sm text-slate-300" colSpan={4}>
@@ -272,21 +295,10 @@ export default function InventoryPage() {
                         : 'Totals: All Products'}
                       <span className="text-slate-500 font-normal ml-1">({filtered.length} items)</span>
                     </td>
-                    {/* Total Qty */}
-                    <td className="px-4 py-3 text-right font-mono text-white font-bold">
-                      {totals.qty}
-                    </td>
-                    {/* Avg cost — blank, not meaningful as sum */}
+                    <td className="px-4 py-3 text-right font-mono text-white font-bold">{totals.qty}</td>
                     <td className="px-4 py-3" />
-                    {/* Total Stock Value (Cost) */}
-                    <td className="px-4 py-3 text-right font-mono text-amber-400 text-sm">
-                      {formatCurrency(totals.stockValue)}
-                    </td>
-                    {/* Total Selling Value */}
-                    <td className="px-4 py-3 text-right font-mono text-violet-400 text-sm">
-                      {formatCurrency(totals.sellValue)}
-                    </td>
-                    {/* Potential Profit */}
+                    <td className="px-4 py-3 text-right font-mono text-amber-400 text-sm">{formatCurrency(totals.stockValue)}</td>
+                    <td className="px-4 py-3 text-right font-mono text-violet-400 text-sm">{formatCurrency(totals.sellValue)}</td>
                     <td className="px-4 py-3 text-left">
                       <span className={`text-xs font-medium ${totals.potProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         Pot. profit: {formatCurrency(totals.potProfit)}
@@ -302,6 +314,21 @@ export default function InventoryPage() {
                   </tr>
                 </tfoot>
               )}
+
+              {/* Cashier footer — stock count only */}
+              {!loading && filtered.length > 0 && !isAdmin && (
+                <tfoot>
+                  <tr className="border-t-2 border-slate-600 bg-slate-800/70 font-semibold">
+                    <td className="px-4 py-3 text-sm text-slate-300" colSpan={3}>
+                      Totals
+                      <span className="text-slate-500 font-normal ml-1">({filtered.length} items)</span>
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-white font-bold">{totals.qty}</td>
+                    <td className="px-4 py-3 text-right font-mono text-violet-400 text-sm">{formatCurrency(totals.sellValue)}</td>
+                    <td colSpan={2} />
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         )}
@@ -313,19 +340,23 @@ export default function InventoryPage() {
         )}
       </div>
 
-      <ProductForm isOpen={showProductForm}
-        onClose={() => { setShowProductForm(false); setSelectedProduct(null) }}
-        product={selectedProduct} onSaved={load} />
+      {isAdmin && (
+        <ProductForm isOpen={showProductForm}
+          onClose={() => { setShowProductForm(false); setSelectedProduct(null) }}
+          product={selectedProduct} onSaved={load} />
+      )}
       {selectedProduct && (
         <RestockForm isOpen={showRestockForm}
           onClose={() => { setShowRestockForm(false); setSelectedProduct(null) }}
           product={selectedProduct} onRestocked={load} />
       )}
-      <ConfirmDialog isOpen={showDeleteConfirm}
-        onClose={() => { setShowDeleteConfirm(false); setSelectedProduct(null) }}
-        onConfirm={handleDelete} title="Archive Product"
-        message={`Archive "${selectedProduct?.name}"? It will be hidden from POS and inventory.`}
-        confirmLabel="Archive" danger loading={deleting} />
+      {isAdmin && (
+        <ConfirmDialog isOpen={showDeleteConfirm}
+          onClose={() => { setShowDeleteConfirm(false); setSelectedProduct(null) }}
+          onConfirm={handleDelete} title="Archive Product"
+          message={`Archive "${selectedProduct?.name}"? It will be hidden from POS and inventory.`}
+          confirmLabel="Archive" danger loading={deleting} />
+      )}
     </div>
   )
 }

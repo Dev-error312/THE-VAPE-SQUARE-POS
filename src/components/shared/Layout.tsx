@@ -7,23 +7,27 @@ import {
 import { useState } from 'react'
 import Footer from './Footer'
 import { useAuthStore } from '../../store/authStore'
+import { useIsAdmin } from '../../hooks/useRole'
 import toast from 'react-hot-toast'
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/pos',       icon: ShoppingCart,    label: 'Point of Sale' },
-  { to: '/inventory', icon: Package,          label: 'Inventory' },
-  { to: '/reports',   icon: BarChart3,        label: 'Reports' },
-  { to: '/analytics', icon: TrendingUp,       label: 'Analytics' },
-  { to: '/wholesale', icon: Store,            label: 'Wholesale' },
-  { to: '/expenses',  icon: DollarSign,       label: 'Expenses' },
-  { to: '/credits',   icon: CreditCard,       label: 'Credits' },
+const ALL_NAV = [
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard',     adminOnly: false },
+  { to: '/pos',       icon: ShoppingCart,    label: 'Point of Sale', adminOnly: false },
+  { to: '/inventory', icon: Package,          label: 'Inventory',    adminOnly: false },
+  { to: '/reports',   icon: BarChart3,        label: 'Reports',      adminOnly: false },
+  { to: '/analytics', icon: TrendingUp,       label: 'Analytics',    adminOnly: true  },
+  { to: '/wholesale', icon: Store,            label: 'Wholesale',    adminOnly: false },
+  { to: '/expenses',  icon: DollarSign,       label: 'Expenses',     adminOnly: false },
+  { to: '/credits',   icon: CreditCard,       label: 'Credits',      adminOnly: true  },
 ]
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user, signOut } = useAuthStore()
   const navigate = useNavigate()
+  const isAdmin = useIsAdmin()
+
+  const navItems = ALL_NAV.filter(item => !item.adminOnly || isAdmin)
 
   const handleSignOut = async () => {
     await signOut()
@@ -87,7 +91,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="text-sm font-medium text-slate-200 truncate">{user?.full_name || 'User'}</div>
-              <div className="text-xs text-slate-500 truncate capitalize">{user?.role || 'cashier'}</div>
+              <div className="text-xs text-slate-500 capitalize">
+                {user?.role === 'admin' ? 'Admin' : 'Cashier'}
+              </div>
             </div>
           </div>
           <button onClick={handleSignOut}

@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { salesApi } from '../../lib/salesApi'
 import { productsApi } from '../../lib/productsApi'
 import { useRefreshStore } from '../../store/refreshStore'
+import { useIsAdmin } from '../../hooks/useRole'
 import { formatCurrency, formatDate } from '../../utils'
 import { TrendingUp, ShoppingCart, Package, AlertTriangle, DollarSign, BarChart2, RefreshCw } from 'lucide-react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
@@ -15,9 +16,8 @@ export default function DashboardPage() {
   const [chartData, setChartData] = useState<{ date: string; revenue: number; profit: number }[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Subscribe to global refresh signal — when any page deletes/creates a sale,
-  // this page will re-fetch automatically
   const salesVersion = useRefreshStore(s => s.salesVersion)
+  const isAdmin = useIsAdmin()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -58,7 +58,6 @@ export default function DashboardPage() {
     }
   }, [])
 
-  // Re-fetch whenever salesVersion changes (triggered by delete, new sale, etc.)
   useEffect(() => { load() }, [load, salesVersion])
 
   const paymentLabel = (method: string) => {
@@ -86,21 +85,22 @@ export default function DashboardPage() {
     </div>
   )
 
+  // Admin sees all 4 cards; cashier sees revenue + product count only
   const statCards = [
-    { label: "Today's Revenue",    value: formatCurrency(stats?.today_revenue         || 0), icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10', sub: `${stats?.today_sales || 0} sales today` },
-    { label: "Today's Profit",     value: formatCurrency(stats?.today_profit          || 0), icon: TrendingUp, color: 'text-primary-400', bg: 'bg-primary-500/10', sub: 'Actual selling − cost' },
-    { label: 'Monthly Revenue',    value: formatCurrency(stats?.monthly_revenue       || 0), icon: BarChart2,  color: 'text-violet-400',  bg: 'bg-violet-500/10',  sub: `${stats?.monthly_sales || 0} sales this month` },
-    { label: 'Total Products',     value: stats?.total_products || 0,                        icon: Package,    color: 'text-amber-400',   bg: 'bg-amber-500/10',   sub: `${stats?.low_stock_count || 0} low stock alerts` },
-  ]
+    { label: "Today's Revenue",  value: formatCurrency(stats?.today_revenue  || 0), icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10', sub: `${stats?.today_sales || 0} sales today`,    adminOnly: false },
+    { label: "Today's Profit",   value: formatCurrency(stats?.today_profit   || 0), icon: TrendingUp, color: 'text-primary-400', bg: 'bg-primary-500/10', sub: 'Actual selling − cost',                      adminOnly: true  },
+    { label: 'Monthly Revenue',  value: formatCurrency(stats?.monthly_revenue || 0), icon: BarChart2,  color: 'text-violet-400',  bg: 'bg-violet-500/10',  sub: `${stats?.monthly_sales || 0} sales this month`, adminOnly: false },
+    { label: 'Total Products',   value: stats?.total_products || 0,                  icon: Package,    color: 'text-amber-400',   bg: 'bg-amber-500/10',   sub: `${stats?.low_stock_count || 0} low stock alerts`, adminOnly: false },
+  ].filter(c => !c.adminOnly || isAdmin)
 
   const stockCards = [
-    { label: 'Stock Value (Cost)',    value: formatCurrency(stats?.total_stock_value       || 0), icon: Package,    color: 'text-slate-300',   bg: 'bg-slate-500/10', sub: 'Current inventory at cost' },
-    { label: 'Potential Revenue',     value: formatCurrency(stats?.potential_selling_value || 0), icon: TrendingUp, color: 'text-blue-400',    bg: 'bg-blue-500/10',  sub: 'If all stock is sold' },
-    { label: 'Potential Profit',      value: formatCurrency(stats?.potential_profit        || 0), icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10',sub: 'Revenue − cost of stock' },
+    { label: 'Stock Value (Cost)',    value: formatCurrency(stats?.total_stock_value       || 0), icon: Package,    color: 'text-slate-300',   bg: 'bg-slate-500/10',   sub: 'Current inventory at cost' },
+    { label: 'Potential Revenue',     value: formatCurrency(stats?.potential_selling_value || 0), icon: TrendingUp, color: 'text-blue-400',    bg: 'bg-blue-500/10',    sub: 'If all stock is sold' },
+    { label: 'Potential Profit',      value: formatCurrency(stats?.potential_profit        || 0), icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10', sub: 'Revenue − cost of stock' },
   ]
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-white">Dashboard</h1>
@@ -112,41 +112,43 @@ export default function DashboardPage() {
       </div>
 
       {/* Sales Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className={`grid grid-cols-2 ${isAdmin ? 'xl:grid-cols-4' : 'sm:grid-cols-3'} gap-4`}>
         {statCards.map(card => (
-          <div key={card.label} className="card p-5">
-            <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center mb-4`}>
+          <div key={card.label} className="card p-4 sm:p-5">
+            <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center mb-3`}>
               <card.icon className={`w-5 h-5 ${card.color}`} />
             </div>
-            <p className="text-2xl font-bold text-white font-mono">{card.value}</p>
+            <p className="text-xl sm:text-2xl font-bold text-white font-mono truncate">{card.value}</p>
             <p className="text-sm font-medium text-slate-300 mt-1">{card.label}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{card.sub}</p>
+            <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">{card.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Stock Valuation */}
-      <div>
-        <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">Stock Valuation</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {stockCards.map(card => (
-            <div key={card.label} className="card p-5">
-              <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center mb-4`}>
-                <card.icon className={`w-5 h-5 ${card.color}`} />
+      {/* Stock Valuation — admin only */}
+      {isAdmin && (
+        <div>
+          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">Stock Valuation</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {stockCards.map(card => (
+              <div key={card.label} className="card p-4 sm:p-5">
+                <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center mb-3`}>
+                  <card.icon className={`w-5 h-5 ${card.color}`} />
+                </div>
+                <p className={`text-xl font-bold font-mono ${card.color}`}>{card.value}</p>
+                <p className="text-sm font-medium text-slate-300 mt-1">{card.label}</p>
+                <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">{card.sub}</p>
               </div>
-              <p className={`text-2xl font-bold font-mono ${card.color}`}>{card.value}</p>
-              <p className="text-sm font-medium text-slate-300 mt-1">{card.label}</p>
-              <p className="text-xs text-slate-500 mt-0.5">{card.sub}</p>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Chart + Low Stock */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="card p-5 xl:col-span-2">
           <h2 className="text-base font-semibold text-white mb-4">Revenue & Profit (7 days)</h2>
-          <ResponsiveContainer width="100%" height={220}>
+          <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
               <defs>
                 <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -168,7 +170,9 @@ export default function DashboardPage() {
                 formatter={(v: number, name: string) => [formatCurrency(v), name]}
               />
               <Area type="monotone" dataKey="revenue" stroke="#0ea5e9" strokeWidth={2} fill="url(#gRevenue)" name="Revenue" />
-              <Area type="monotone" dataKey="profit"  stroke="#10b981" strokeWidth={2} fill="url(#gProfit)"  name="Profit" />
+              {isAdmin && (
+                <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="url(#gProfit)" name="Profit" />
+              )}
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -176,7 +180,7 @@ export default function DashboardPage() {
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="w-4 h-4 text-amber-400" />
-            <h2 className="text-base font-semibold text-white">Low Stock Alerts</h2>
+            <h2 className="text-base font-semibold text-white">Low Stock</h2>
             {lowStock.length > 0 && (
               <span className="ml-auto badge bg-amber-500/20 text-amber-400 text-xs">{lowStock.length}</span>
             )}
@@ -190,9 +194,9 @@ export default function DashboardPage() {
             <div className="space-y-2 overflow-y-auto max-h-52">
               {lowStock.map(p => (
                 <div key={p.id} className="flex items-center justify-between py-2 border-b border-slate-700/40 last:border-0">
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium text-slate-200 truncate">{p.name}</p>
-                    {p.brand && <p className="text-xs text-slate-500">{p.brand}</p>}
+                    {p.brand && <p className="text-xs text-slate-500 truncate">{p.brand}</p>}
                   </div>
                   <span className={`badge ml-2 flex-shrink-0 ${(p.total_stock || 0) === 0
                     ? 'bg-red-500/20 text-red-400 border border-red-500/30'
@@ -208,7 +212,7 @@ export default function DashboardPage() {
 
       {/* Recent Sales */}
       <div className="card overflow-hidden">
-        <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-700/40">
+        <div className="flex items-center gap-2 px-4 sm:px-5 py-4 border-b border-slate-700/40">
           <ShoppingCart className="w-4 h-4 text-slate-400" />
           <h2 className="text-base font-semibold text-white">Recent Sales</h2>
         </div>
@@ -217,10 +221,10 @@ export default function DashboardPage() {
             <thead>
               <tr className="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-700/40 bg-slate-800/40">
                 <th className="text-left px-4 py-3">Invoice</th>
-                <th className="text-left px-4 py-3">Date</th>
+                <th className="text-left px-4 py-3 hidden sm:table-cell">Date</th>
                 <th className="text-left px-4 py-3">Products</th>
-                <th className="text-right px-4 py-3">Qty</th>
-                <th className="text-left px-4 py-3">Payment</th>
+                <th className="text-right px-4 py-3 hidden sm:table-cell">Qty</th>
+                <th className="text-left px-4 py-3 hidden sm:table-cell">Payment</th>
                 <th className="text-right px-4 py-3">Total</th>
                 <th className="text-left px-4 py-3">Status</th>
               </tr>
@@ -233,13 +237,13 @@ export default function DashboardPage() {
                 return (
                   <tr key={sale.id} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
                     <td className="px-4 py-3 font-mono text-xs text-primary-400 whitespace-nowrap">{sale.sale_number}</td>
-                    <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">{formatDate(sale.created_at)}</td>
-                    <td className="px-4 py-3 text-xs text-slate-300 max-w-[200px] truncate">{label}</td>
-                    <td className="px-4 py-3 text-right text-sm font-mono text-slate-300">{qty}</td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap hidden sm:table-cell">{formatDate(sale.created_at)}</td>
+                    <td className="px-4 py-3 text-xs text-slate-300 max-w-[120px] sm:max-w-[200px] truncate">{label}</td>
+                    <td className="px-4 py-3 text-right text-sm font-mono text-slate-300 hidden sm:table-cell">{qty}</td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
                       <span className="badge bg-slate-700 text-slate-300 text-xs">{paymentLabel(sale.payment_method)}</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-bold font-mono text-white whitespace-nowrap">{formatCurrency(sale.total)}</td>
+                    <td className="px-4 py-3 text-right font-bold font-mono text-white whitespace-nowrap text-sm">{formatCurrency(sale.total)}</td>
                     <td className="px-4 py-3">
                       <span className={`badge text-xs capitalize ${sale.status === 'completed'
                         ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'

@@ -1,6 +1,7 @@
 import Modal from '../shared/Modal'
 import type { Sale } from '../../types'
 import { formatCurrency, formatDateTime } from '../../utils'
+import { useIsAdmin } from '../../hooks/useRole'
 import { Printer } from 'lucide-react'
 import { useRef } from 'react'
 
@@ -12,6 +13,7 @@ interface SaleDetailModalProps {
 
 export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailModalProps) {
   const invoiceRef = useRef<HTMLDivElement>(null)
+  const isAdmin    = useIsAdmin()
 
   const handlePrint = () => {
     if (!invoiceRef.current) return
@@ -34,17 +36,15 @@ export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailMod
   if (!sale) return null
 
   const items = sale.sale_items || []
-  // Correct: profit = actual revenue received (line_total) minus cost of goods
-  // line_total already has discount subtracted (stored at time of sale)
   const profit = items.reduce((sum, item) => {
     return sum + (item.line_total - item.cost_price * item.quantity)
   }, 0)
   const cost = sale.total - profit
 
   const paymentLabel = (method: string) => {
-    if (method === 'cash') return 'Cash'
+    if (method === 'cash')   return 'Cash'
     if (method === 'online') return 'Online'
-    if (method === 'split') return 'Split'
+    if (method === 'split')  return 'Split'
     return method
   }
 
@@ -62,23 +62,30 @@ export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailMod
           </span>
         </div>
 
-        {/* Profit summary */}
-        <div className="grid grid-cols-3 gap-3">
-          <div className="bg-slate-700/40 rounded-xl p-3 text-center">
-            <p className="text-xs text-slate-400 mb-1">Revenue</p>
-            <p className="font-bold text-white font-mono text-sm">{formatCurrency(sale.total)}</p>
+        {/* Profit summary — admin only */}
+        {isAdmin ? (
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-slate-700/40 rounded-xl p-3 text-center">
+              <p className="text-xs text-slate-400 mb-1">Revenue</p>
+              <p className="font-bold text-white font-mono text-sm">{formatCurrency(sale.total)}</p>
+            </div>
+            <div className="bg-slate-700/40 rounded-xl p-3 text-center">
+              <p className="text-xs text-slate-400 mb-1">Cost (COGS)</p>
+              <p className="font-bold text-white font-mono text-sm">{formatCurrency(cost)}</p>
+            </div>
+            <div className="bg-slate-700/40 rounded-xl p-3 text-center">
+              <p className="text-xs text-slate-400 mb-1">Profit</p>
+              <p className={`font-bold font-mono text-sm ${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                {formatCurrency(profit)}
+              </p>
+            </div>
           </div>
+        ) : (
           <div className="bg-slate-700/40 rounded-xl p-3 text-center">
-            <p className="text-xs text-slate-400 mb-1">Cost (COGS)</p>
-            <p className="font-bold text-white font-mono text-sm">{formatCurrency(cost)}</p>
+            <p className="text-xs text-slate-400 mb-1">Sale Total</p>
+            <p className="font-bold text-white font-mono text-lg">{formatCurrency(sale.total)}</p>
           </div>
-          <div className="bg-slate-700/40 rounded-xl p-3 text-center">
-            <p className="text-xs text-slate-400 mb-1">Profit</p>
-            <p className={`font-bold font-mono text-sm ${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {formatCurrency(profit)}
-            </p>
-          </div>
-        </div>
+        )}
 
         {/* Payment breakdown */}
         <div className="bg-slate-700/30 rounded-xl p-4 text-sm space-y-2">
@@ -121,7 +128,7 @@ export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailMod
           )}
         </div>
 
-        {/* Printable invoice */}
+        {/* Printable invoice — always shows only customer-facing info */}
         <div ref={invoiceRef} className="bg-white text-black rounded-xl p-5 font-mono text-xs leading-relaxed">
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontWeight: 'bold', fontSize: 16 }}>The Vape Square</div>
@@ -136,7 +143,7 @@ export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailMod
           </div>
           <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
           {items.map((item, i) => {
-            const listPrice = item.unit_price * item.quantity
+            const listPrice  = item.unit_price * item.quantity
             const hasDiscount = item.discount_amount > 0
             return (
               <div key={i} style={{ marginBottom: 4 }}>

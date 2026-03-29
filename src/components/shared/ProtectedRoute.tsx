@@ -3,9 +3,11 @@ import { useAuthStore } from '../../store/authStore'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
+  /** When true, non-admin users are redirected to /dashboard */
+  adminOnly?: boolean
 }
 
-export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+export default function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
   const { user, loading } = useAuthStore()
 
   if (loading) {
@@ -20,5 +22,10 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
   }
 
   if (!user) return <Navigate to="/login" replace />
+
+  if (adminOnly && user.role !== 'admin') {
+    return <Navigate to="/dashboard" replace />
+  }
+
   return <>{children}</>
 }
