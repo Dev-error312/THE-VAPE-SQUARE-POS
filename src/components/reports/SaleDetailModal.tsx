@@ -65,44 +65,44 @@ export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailMod
         {/* Profit summary — admin only */}
         {isAdmin ? (
           <div className="grid grid-cols-3 gap-3">
-            <div className="bg-slate-700/40 rounded-xl p-3 text-center">
-              <p className="text-xs text-slate-400 mb-1">Revenue</p>
-              <p className="font-bold text-white font-mono text-sm">{formatCurrency(sale.total)}</p>
+            <div className="bg-slate-200 dark:bg-slate-700/40 rounded-xl p-3 text-center">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Revenue</p>
+              <p className="font-bold text-slate-900 dark:text-white font-mono text-sm">{formatCurrency(sale.total)}</p>
             </div>
-            <div className="bg-slate-700/40 rounded-xl p-3 text-center">
-              <p className="text-xs text-slate-400 mb-1">Cost (COGS)</p>
-              <p className="font-bold text-white font-mono text-sm">{formatCurrency(cost)}</p>
+            <div className="bg-slate-200 dark:bg-slate-700/40 rounded-xl p-3 text-center">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Cost (COGS)</p>
+              <p className="font-bold text-slate-900 dark:text-white font-mono text-sm">{formatCurrency(cost)}</p>
             </div>
-            <div className="bg-slate-700/40 rounded-xl p-3 text-center">
-              <p className="text-xs text-slate-400 mb-1">Profit</p>
+            <div className="bg-slate-200 dark:bg-slate-700/40 rounded-xl p-3 text-center">
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Profit</p>
               <p className={`font-bold font-mono text-sm ${profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {formatCurrency(profit)}
               </p>
             </div>
           </div>
         ) : (
-          <div className="bg-slate-700/40 rounded-xl p-3 text-center">
-            <p className="text-xs text-slate-400 mb-1">Sale Total</p>
-            <p className="font-bold text-white font-mono text-lg">{formatCurrency(sale.total)}</p>
+          <div className="bg-slate-200 dark:bg-slate-700/40 rounded-xl p-3 text-center">
+            <p className="text-xs text-slate-600 dark:text-slate-400 mb-1">Sale Total</p>
+            <p className="font-bold text-slate-900 dark:text-white font-mono text-lg">{formatCurrency(sale.total)}</p>
           </div>
         )}
 
         {/* Payment breakdown */}
-        <div className="bg-slate-700/30 rounded-xl p-4 text-sm space-y-2">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Payment Details</p>
+        <div className="bg-slate-200 dark:bg-slate-700/30 rounded-xl p-4 text-sm space-y-2">
+          <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-2">Payment Details</p>
           <div className="flex justify-between">
-            <span className="text-slate-400">Method</span>
-            <span className="text-slate-200 font-medium">{paymentLabel(sale.payment_method)}</span>
+            <span className="text-slate-600 dark:text-slate-400">Method</span>
+            <span className="text-slate-800 dark:text-slate-200 font-medium">{paymentLabel(sale.payment_method)}</span>
           </div>
           {sale.payment_method === 'cash' && (
             <>
               <div className="flex justify-between">
-                <span className="text-slate-400">Cash Paid</span>
-                <span className="text-slate-200 font-mono">{formatCurrency(sale.cash_amount)}</span>
+                <span className="text-slate-600 dark:text-slate-400">Cash Paid</span>
+                <span className="text-slate-800 dark:text-slate-200 font-mono">{formatCurrency(sale.cash_amount)}</span>
               </div>
               {(sale.change_amount || 0) > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Change</span>
+                  <span className="text-slate-600 dark:text-slate-400">Change</span>
                   <span className="text-emerald-400 font-mono">{formatCurrency(sale.change_amount)}</span>
                 </div>
               )}
@@ -110,19 +110,19 @@ export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailMod
           )}
           {sale.payment_method === 'online' && (
             <div className="flex justify-between">
-              <span className="text-slate-400">Online Amount</span>
-              <span className="text-slate-200 font-mono">{formatCurrency(sale.online_amount)}</span>
+              <span className="text-slate-600 dark:text-slate-400">Online Amount</span>
+              <span className="text-slate-800 dark:text-slate-200 font-mono">{formatCurrency(sale.online_amount)}</span>
             </div>
           )}
           {sale.payment_method === 'split' && (
             <>
               <div className="flex justify-between">
-                <span className="text-slate-400">Cash</span>
-                <span className="text-slate-200 font-mono">{formatCurrency(sale.cash_amount)}</span>
+                <span className="text-slate-600 dark:text-slate-400">Cash</span>
+                <span className="text-slate-800 dark:text-slate-200 font-mono">{formatCurrency(sale.cash_amount)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Online</span>
-                <span className="text-slate-200 font-mono">{formatCurrency(sale.online_amount)}</span>
+                <span className="text-slate-600 dark:text-slate-400">Online</span>
+                <span className="text-slate-800 dark:text-slate-200 font-mono">{formatCurrency(sale.online_amount)}</span>
               </div>
             </>
           )}

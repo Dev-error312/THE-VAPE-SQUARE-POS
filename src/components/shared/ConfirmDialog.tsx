@@ -22,7 +22,7 @@ export default function ConfirmDialog({
         <div className={`w-14 h-14 rounded-full flex items-center justify-center ${danger ? 'bg-red-500/20' : 'bg-amber-500/20'}`}>
           <AlertTriangle className={`w-7 h-7 ${danger ? 'text-red-400' : 'text-amber-400'}`} />
         </div>
-        <p className="text-slate-300">{message}</p>
+        <p className="text-slate-700 dark:text-slate-300">{message}</p>
         <div className="flex gap-3 w-full">
           <button onClick={onClose} className="btn-secondary flex-1">Cancel</button>
           <button

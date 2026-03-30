@@ -26,9 +26,9 @@ export function useTheme() {
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY) as ThemeMode | null
-      return stored && ['dark', 'light', 'system'].includes(stored) ? stored : 'dark'
+      return stored && ['dark', 'light', 'system'].includes(stored) ? stored : 'system'
     } catch {
-      return 'dark'
+      return 'system'
     }
   })
 
@@ -62,9 +62,9 @@ export function useTheme() {
  * Paste this verbatim inside a <script> tag in index.html:
  *
  *   (function(){
- *     var t=localStorage.getItem('theme')||'dark';
+ *     var t=localStorage.getItem('theme')||'system';
  *     var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);
  *     if(d) document.documentElement.classList.add('dark');
  *   })();
  */
-export const ANTI_FLICKER_SCRIPT = `(function(){var t=localStorage.getItem('theme')||'dark';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');})();`
+export const ANTI_FLICKER_SCRIPT = `(function(){var t=localStorage.getItem('theme')||'system';var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');})();`

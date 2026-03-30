@@ -177,8 +177,8 @@ export default function CreditsPage() {
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Credits & Payables</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Track outstanding payments to suppliers</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Credits & Payables</h1>
+          <p className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">Track outstanding payments to suppliers</p>
         </div>
         <button onClick={load} className="btn-secondary flex items-center gap-2 text-sm">
           <RefreshCw className="w-4 h-4" /> Refresh
@@ -198,8 +198,8 @@ export default function CreditsPage() {
               <s.icon className={`w-5 h-5 ${s.color}`} />
             </div>
             <div>
-              <p className="text-xl font-bold text-white font-mono leading-none">{s.value}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{s.label}</p>
+              <p className="text-xl font-bold text-slate-900 dark:text-white font-mono leading-none">{s.value}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{s.label}</p>
             </div>
           </div>
         ))}
@@ -234,21 +234,21 @@ export default function CreditsPage() {
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
                 filterStart === p.start && filterEnd === p.end
                   ? 'bg-primary-600 text-white'
-                  : 'bg-slate-700 text-slate-400 hover:text-slate-200'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}>
               {p.label}
             </button>
           ))}
           <button onClick={() => { setFilterStart(''); setFilterEnd('') }}
-            className="text-xs px-3 py-1.5 rounded-lg bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors">
+            className="text-xs px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
             All Time
           </button>
           {/* Status tabs */}
-          <div className="ml-auto flex gap-1 bg-slate-800 p-1 rounded-lg">
+          <div className="ml-auto flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-lg">
             {(['pending', 'paid', 'all'] as const).map(f => (
               <button key={f} onClick={() => setFilterStatus(f)}
                 className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-all ${
-                  filterStatus === f ? 'bg-primary-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                  filterStatus === f ? 'bg-primary-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}>
                 {f}
               </button>
@@ -262,8 +262,8 @@ export default function CreditsPage() {
         <div className="flex items-center justify-center py-20"><LoadingSpinner text="Loading credits..." /></div>
       ) : (
         <div className="card overflow-hidden">
-          <div className="px-5 py-3 border-b border-slate-700/40 flex items-center gap-3">
-            <h2 className="text-sm font-semibold text-white">
+          <div className="px-5 py-3 border-b border-slate-200 dark:border-slate-700/40 flex items-center gap-3">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
               {filterStatus === 'pending' ? 'Pending Payments' : filterStatus === 'paid' ? 'Paid Records' : 'All Credit Purchases'}
             </h2>
             <span className="text-xs text-slate-500">({filtered.length} records)</span>
@@ -271,7 +271,7 @@ export default function CreditsPage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-700/40 bg-slate-800/40">
+                <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/40">
                   <th className="text-left px-5 py-3">Supplier</th>
                   <th className="text-left px-5 py-3">Product</th>
                   <th className="text-left px-5 py-3">Date</th>
@@ -295,16 +295,16 @@ export default function CreditsPage() {
                   const remaining = Math.max(0, p.total_amount - p.paid_amount)
                   const badge     = paymentBadge(p)
                   return (
-                    <tr key={p.id} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
-                      <td className="px-5 py-3 font-medium text-slate-200 text-sm">
+                    <tr key={p.id} className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
+                      <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-200 text-sm">
                         {p.supplier?.name || <span className="text-slate-500 italic">No supplier</span>}
                       </td>
-                      <td className="px-5 py-3 text-sm text-slate-400">
+                      <td className="px-5 py-3 text-sm text-slate-600 dark:text-slate-400">
                         {p.product?.name || '—'}
                         {p.quantity > 0 && <span className="text-slate-600 ml-1">×{p.quantity}</span>}
                       </td>
-                      <td className="px-5 py-3 text-sm text-slate-400 whitespace-nowrap">{formatDate(p.created_at)}</td>
-                      <td className="px-5 py-3 text-right font-mono text-white">{formatCurrency(p.total_amount)}</td>
+                      <td className="px-5 py-3 text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">{formatDate(p.created_at)}</td>
+                      <td className="px-5 py-3 text-right font-mono text-slate-900 dark:text-white">{formatCurrency(p.total_amount)}</td>
                       <td className="px-5 py-3 text-right font-mono text-emerald-400">{formatCurrency(p.paid_amount)}</td>
                       <td className={`px-5 py-3 text-right font-bold font-mono ${remaining > 0.001 ? 'text-red-400' : 'text-emerald-400'}`}>
                         {formatCurrency(remaining)}
@@ -338,25 +338,25 @@ export default function CreditsPage() {
       <Modal isOpen={!!payModal} onClose={() => { setPayModal(null); setPayAmount('') }} title="Record Payment">
         {payModal && (
           <div className="space-y-4">
-            <div className="bg-slate-700/40 rounded-xl p-4 space-y-2 text-sm">
+            <div className="bg-slate-200 dark:bg-slate-700/40 rounded-xl p-4 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-400">Supplier</span>
-                <span className="text-white font-medium">{payModal.supplier?.name || '—'}</span>
+                <span className="text-slate-600 dark:text-slate-400">Supplier</span>
+                <span className="text-slate-900 dark:text-white font-medium">{payModal.supplier?.name || '—'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Product</span>
-                <span className="text-slate-300">{payModal.product?.name || '—'}</span>
+                <span className="text-slate-600 dark:text-slate-400">Product</span>
+                <span className="text-slate-700 dark:text-slate-300">{payModal.product?.name || '—'}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Total Amount</span>
-                <span className="text-white font-mono">{formatCurrency(payModal.total_amount)}</span>
+                <span className="text-slate-600 dark:text-slate-400">Total Amount</span>
+                <span className="text-slate-900 dark:text-white font-mono">{formatCurrency(payModal.total_amount)}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-slate-400">Already Paid</span>
+                <span className="text-slate-600 dark:text-slate-400">Already Paid</span>
                 <span className="text-emerald-400 font-mono">{formatCurrency(payModal.paid_amount)}</span>
               </div>
-              <div className="flex justify-between border-t border-slate-600 pt-2">
-                <span className="text-slate-300 font-medium">Remaining</span>
+              <div className="flex justify-between border-t border-slate-300 dark:border-slate-600 pt-2">
+                <span className="text-slate-700 dark:text-slate-300 font-medium">Remaining</span>
                 <span className="text-red-400 font-bold font-mono">
                   {formatCurrency(Math.max(0, payModal.total_amount - payModal.paid_amount))}
                 </span>
@@ -366,7 +366,7 @@ export default function CreditsPage() {
             <div>
               <label className="label">Amount to Pay (रु)</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">रु</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">रु</span>
                 <input className="input pl-9 font-mono" type="number" step="0.01" min="0.01"
                   max={payModal.total_amount - payModal.paid_amount}
                   value={payAmount} onChange={e => setPayAmount(e.target.value)}

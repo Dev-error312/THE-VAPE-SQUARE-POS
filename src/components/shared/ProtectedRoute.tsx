@@ -12,10 +12,10 @@ export default function ProtectedRoute({ children, adminOnly = false }: Protecte
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-slate-950 flex items-center justify-center">
+      <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-10 h-10 border-2 border-slate-700 border-t-primary-500 rounded-full animate-spin" />
-          <p className="text-slate-400 text-sm">Loading...</p>
+          <div className="w-10 h-10 border-2 border-slate-200 dark:border-slate-700 border-t-primary-500 rounded-full animate-spin" />
+          <p className="text-slate-600 dark:text-slate-400 text-sm">Loading...</p>
         </div>
       </div>
     )

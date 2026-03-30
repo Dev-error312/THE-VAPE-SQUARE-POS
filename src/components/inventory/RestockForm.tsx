@@ -121,15 +121,15 @@ export default function RestockForm({ isOpen, onClose, product, onRestocked }: R
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Restock Product" size="lg">
       {/* Product banner */}
-      <div className="mb-4 p-3 bg-slate-700/40 rounded-xl border border-slate-700/50 flex items-center justify-between">
+      <div className="mb-4 p-3 bg-slate-200 dark:bg-slate-700/40 rounded-xl border border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
         <div>
-          <p className="text-sm font-semibold text-white">{product.name}</p>
-          <p className="text-xs text-slate-400 mt-0.5">
-            Current stock: <span className="text-white font-medium">{product.total_stock || 0} {product.unit}</span>
+          <p className="text-sm font-semibold text-slate-900 dark:text-white">{product.name}</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+            Current stock: <span className="text-slate-900 dark:text-white font-medium">{product.total_stock || 0} {product.unit}</span>
           </p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-slate-400">Current price</p>
+          <p className="text-xs text-slate-600 dark:text-slate-400">Current price</p>
           <p className="text-sm font-bold text-primary-400 font-mono">{formatCurrency(product.selling_price)}</p>
         </div>
       </div>
@@ -146,7 +146,7 @@ export default function RestockForm({ isOpen, onClose, product, onRestocked }: R
           <div>
             <label className="label">Cost Price / {product.unit} (रु) *</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">रु</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">रु</span>
               <input className="input pl-9 font-mono" type="number" step="0.01" min="0"
                 value={form.cost_price} onChange={e => set('cost_price', e.target.value)}
                 placeholder="0" required />
@@ -158,7 +158,7 @@ export default function RestockForm({ isOpen, onClose, product, onRestocked }: R
         <div>
           <label className="label">Selling Price / {product.unit} (रु) *</label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">रु</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">रु</span>
             <input className="input pl-9 font-mono" type="number" step="0.01" min="0"
               value={form.selling_price} onChange={e => set('selling_price', e.target.value)}
               placeholder="0" required />
@@ -176,7 +176,7 @@ export default function RestockForm({ isOpen, onClose, product, onRestocked }: R
                 className={`p-3 rounded-xl border text-left transition-all ${
                   form.payment_type === pt.id
                     ? 'bg-primary-600 border-primary-500 text-white'
-                    : 'bg-slate-700/40 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200'
+                    : 'bg-slate-200 dark:bg-slate-700/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
                 }`}>
                 <p className="text-xs font-bold leading-tight">{pt.label}</p>
                 <p className="text-xs opacity-70 mt-0.5 leading-tight">{pt.desc}</p>
@@ -190,7 +190,7 @@ export default function RestockForm({ isOpen, onClose, product, onRestocked }: R
           <div>
             <label className="label">Amount Paid Now (रु)</label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">रु</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">रु</span>
               <input className="input pl-9 font-mono" type="number" step="0.01" min="0.01"
                 max={totalCost > 0 ? totalCost - 0.01 : undefined}
                 value={form.paid_amount} onChange={e => set('paid_amount', e.target.value)}
@@ -215,23 +215,23 @@ export default function RestockForm({ isOpen, onClose, product, onRestocked }: R
 
         {/* Preview */}
         {qty > 0 && (
-          <div className="bg-slate-700/40 rounded-xl p-3 grid grid-cols-4 gap-3 text-center">
+          <div className="bg-slate-200 dark:bg-slate-700/40 rounded-xl p-3 grid grid-cols-4 gap-3 text-center">
             <div>
-              <p className="text-xs text-slate-400 mb-0.5">Total Cost</p>
-              <p className="text-sm font-bold text-white font-mono">{formatCurrency(totalCost)}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-0.5">Total Cost</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white font-mono">{formatCurrency(totalCost)}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-400 mb-0.5">Paid Now</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-0.5">Paid Now</p>
               <p className="text-sm font-bold text-emerald-400 font-mono">{formatCurrency(paidAmount)}</p>
             </div>
             <div>
-              <p className="text-xs text-slate-400 mb-0.5">Remaining</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-0.5">Remaining</p>
               <p className={`text-sm font-bold font-mono ${remaining > 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
                 {formatCurrency(remaining)}
               </p>
             </div>
             <div>
-              <p className="text-xs text-slate-400 mb-0.5">Margin</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mb-0.5">Margin</p>
               <p className={`text-sm font-bold ${margin !== null && margin >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {margin !== null ? `${margin.toFixed(1)}%` : '—'}
               </p>

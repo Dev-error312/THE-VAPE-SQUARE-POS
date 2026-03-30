@@ -212,7 +212,7 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
               <div>
                 <label className="label">Selling Price (रु)</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">रु</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">रु</span>
                   <input className="input pl-9 font-mono" type="number" step="0.01" min="0"
                     value={form.selling_price} onChange={e => set('selling_price', e.target.value)} placeholder="0" />
                 </div>
@@ -220,7 +220,7 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
               <div>
                 <label className="label">Cost Price (रु)</label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">रु</span>
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">रु</span>
                   <input className="input pl-9 font-mono" type="number" step="0.01" min="0"
                     value={form.cost_price} onChange={e => set('cost_price', e.target.value)} placeholder="0" />
                 </div>
@@ -255,7 +255,7 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
         )}
 
         {!isEdit && (
-          <p className="text-xs text-slate-500 bg-slate-700/30 rounded-lg px-3 py-2">
+          <p className="text-xs text-slate-500 bg-slate-200 dark:bg-slate-700/30 rounded-lg px-3 py-2">
             After adding, use <span className="text-primary-400 font-medium">Restock</span> to set cost price, selling price, and initial stock.
           </p>
         )}

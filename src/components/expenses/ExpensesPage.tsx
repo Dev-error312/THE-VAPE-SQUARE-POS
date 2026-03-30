@@ -203,8 +203,8 @@ export default function ExpensesPage() {
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Expenses & Damages</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Track business expenses, damaged stock, and tester products</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Expenses & Damages</h1>
+          <p className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">Track business expenses, damaged stock, and tester products</p>
         </div>
         {tab !== 'all' && (
           <button
@@ -240,13 +240,13 @@ export default function ExpensesPage() {
             <button key={p.label}
               onClick={() => { setFilterStart(p.start); setFilterEnd(p.end) }}
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                filterStart === p.start && filterEnd === p.end ? 'bg-primary-600 text-white' : 'bg-slate-700 text-slate-400 hover:text-slate-200'
+                filterStart === p.start && filterEnd === p.end ? 'bg-primary-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}>
               {p.label}
             </button>
           ))}
           <button onClick={() => { setFilterStart(''); setFilterEnd('') }}
-            className="text-xs px-3 py-1.5 rounded-lg bg-slate-700 text-slate-400 hover:text-slate-200 transition-colors">
+            className="text-xs px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
             All Time
           </button>
         </div>
@@ -259,9 +259,9 @@ export default function ExpensesPage() {
             <div className="w-10 h-10 bg-red-500/10 rounded-xl flex items-center justify-center">
               <DollarSign className="w-5 h-5 text-red-400" />
             </div>
-            <p className="text-sm font-medium text-slate-400">Expenses</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Expenses</p>
           </div>
-          <p className="text-2xl font-bold text-white font-mono">{formatCurrency(totalExpenses)}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white font-mono">{formatCurrency(totalExpenses)}</p>
           <p className="text-xs text-slate-500 mt-1">{normalExpenses.length} records</p>
         </div>
         <div className="card p-5">
@@ -269,9 +269,9 @@ export default function ExpensesPage() {
             <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center">
               <AlertTriangle className="w-5 h-5 text-amber-400" />
             </div>
-            <p className="text-sm font-medium text-slate-400">Damage Loss</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Damage Loss</p>
           </div>
-          <p className="text-2xl font-bold text-white font-mono">{formatCurrency(totalDamages)}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white font-mono">{formatCurrency(totalDamages)}</p>
           <p className="text-xs text-slate-500 mt-1">{damaged.length} records</p>
         </div>
         <div className="card p-5">
@@ -279,25 +279,25 @@ export default function ExpensesPage() {
             <div className="w-10 h-10 bg-violet-500/10 rounded-xl flex items-center justify-center">
               <FlaskConical className="w-5 h-5 text-violet-400" />
             </div>
-            <p className="text-sm font-medium text-slate-400">Tester Cost</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Tester Cost</p>
           </div>
-          <p className="text-2xl font-bold text-white font-mono">{formatCurrency(totalTesters)}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white font-mono">{formatCurrency(totalTesters)}</p>
           <p className="text-xs text-slate-500 mt-1">{testerExpenses.length} records</p>
         </div>
         <div className="card p-5">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-10 h-10 bg-slate-500/10 rounded-xl flex items-center justify-center">
-              <List className="w-5 h-5 text-slate-400" />
+              <List className="w-5 h-5 text-slate-600 dark:text-slate-400" />
             </div>
-            <p className="text-sm font-medium text-slate-400">Total Outflow</p>
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Outflow</p>
           </div>
-          <p className="text-2xl font-bold text-white font-mono">{formatCurrency(totalAll)}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white font-mono">{formatCurrency(totalAll)}</p>
           <p className="text-xs text-slate-500 mt-1">{normalExpenses.length + damaged.length + testerExpenses.length} records</p>
         </div>
       </div>
 
       {/* Tab switcher */}
-      <div className="flex gap-1 bg-slate-800 p-1 rounded-xl w-fit flex-wrap">
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl w-fit flex-wrap">
         {([
           { id: 'expenses', label: 'Expenses' },
           { id: 'damaged',  label: 'Damaged Products' },
@@ -306,7 +306,7 @@ export default function ExpensesPage() {
         ] as { id: Tab; label: string }[]).map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              tab === t.id ? 'bg-primary-600 text-white' : 'text-slate-400 hover:text-slate-200'
+              tab === t.id ? 'bg-primary-600 text-white' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
             }`}>
             {t.label}
           </button>
@@ -317,14 +317,14 @@ export default function ExpensesPage() {
         <div className="flex items-center justify-center py-20"><LoadingSpinner text="Loading..." /></div>
       ) : tab === 'expenses' ? (
         <div className="card overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/40">
-            <h2 className="text-base font-semibold text-white">Expenses</h2>
-            <button onClick={load} className="text-slate-500 hover:text-slate-300 transition-colors"><RefreshCw className="w-4 h-4" /></button>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700/40">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Expenses</h2>
+            <button onClick={load} className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors"><RefreshCw className="w-4 h-4" /></button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-700/40 bg-slate-800/40">
+                <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/40">
                   <th className="text-left px-5 py-3">Title</th>
                   <th className="text-left px-5 py-3">Date</th>
                   <th className="text-left px-5 py-3">Notes</th>
@@ -336,9 +336,9 @@ export default function ExpensesPage() {
                 {normalExpenses.length === 0 ? (
                   <tr><td colSpan={5} className="text-center py-12 text-slate-500 text-sm">No expenses recorded yet</td></tr>
                 ) : normalExpenses.map(exp => (
-                  <tr key={exp.id} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
-                    <td className="px-5 py-3 font-medium text-slate-200 text-sm">{exp.title}</td>
-                    <td className="px-5 py-3 text-sm text-slate-400">{formatDate(exp.expense_date)}</td>
+                  <tr key={exp.id} className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
+                    <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-200 text-sm">{exp.title}</td>
+                    <td className="px-5 py-3 text-sm text-slate-600 dark:text-slate-400">{formatDate(exp.expense_date)}</td>
                     <td className="px-5 py-3 text-sm text-slate-500">{exp.notes || '—'}</td>
                     <td className="px-5 py-3 text-right font-bold font-mono text-red-400">{formatCurrency(exp.amount)}</td>
                     <td className="px-5 py-3 text-center">
@@ -352,8 +352,8 @@ export default function ExpensesPage() {
               </tbody>
               {normalExpenses.length > 0 && (
                 <tfoot>
-                  <tr className="border-t-2 border-slate-600 bg-slate-800/60">
-                    <td colSpan={3} className="px-5 py-3 font-semibold text-slate-300">Total</td>
+                  <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/60">
+                    <td colSpan={3} className="px-5 py-3 font-semibold text-slate-700 dark:text-slate-300">Total</td>
                     <td className="px-5 py-3 text-right font-bold font-mono text-red-400 text-base">{formatCurrency(totalExpenses)}</td>
                     <td />
                   </tr>
@@ -364,14 +364,14 @@ export default function ExpensesPage() {
         </div>
       ) : tab === 'damaged' ? (
         <div className="card overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/40">
-            <h2 className="text-base font-semibold text-white">Damaged Products</h2>
-            <button onClick={load} className="text-slate-500 hover:text-slate-300 transition-colors"><RefreshCw className="w-4 h-4" /></button>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700/40">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Damaged Products</h2>
+            <button onClick={load} className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors"><RefreshCw className="w-4 h-4" /></button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-700/40 bg-slate-800/40">
+                <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/40">
                   <th className="text-left px-5 py-3">Product</th>
                   <th className="text-right px-5 py-3">Qty</th>
                   <th className="text-right px-5 py-3">Cost/Unit</th>
@@ -385,11 +385,11 @@ export default function ExpensesPage() {
                 {damaged.length === 0 ? (
                   <tr><td colSpan={7} className="text-center py-12 text-slate-500 text-sm">No damaged products recorded</td></tr>
                 ) : damaged.map(d => (
-                  <tr key={d.id} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
-                    <td className="px-5 py-3 font-medium text-slate-200 text-sm">{d.product_name}</td>
-                    <td className="px-5 py-3 text-right font-mono text-slate-300">{d.quantity}</td>
-                    <td className="px-5 py-3 text-right font-mono text-slate-300">{formatCurrency(d.cost_price)}</td>
-                    <td className="px-5 py-3 text-sm text-slate-400">{formatDate(d.damage_date)}</td>
+                  <tr key={d.id} className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
+                    <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-200 text-sm">{d.product_name}</td>
+                    <td className="px-5 py-3 text-right font-mono text-slate-700 dark:text-slate-300">{d.quantity}</td>
+                    <td className="px-5 py-3 text-right font-mono text-slate-700 dark:text-slate-300">{formatCurrency(d.cost_price)}</td>
+                    <td className="px-5 py-3 text-sm text-slate-600 dark:text-slate-400">{formatDate(d.damage_date)}</td>
                     <td className="px-5 py-3 text-sm text-slate-500">{d.notes || '—'}</td>
                     <td className="px-5 py-3 text-right font-bold font-mono text-amber-400">{formatCurrency(d.loss_amount)}</td>
                     <td className="px-5 py-3 text-center">
@@ -400,8 +400,8 @@ export default function ExpensesPage() {
               </tbody>
               {damaged.length > 0 && (
                 <tfoot>
-                  <tr className="border-t-2 border-slate-600 bg-slate-800/60">
-                    <td colSpan={5} className="px-5 py-3 font-semibold text-slate-300">Total Loss</td>
+                  <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/60">
+                    <td colSpan={5} className="px-5 py-3 font-semibold text-slate-700 dark:text-slate-300">Total Loss</td>
                     <td className="px-5 py-3 text-right font-bold font-mono text-amber-400 text-base">{formatCurrency(totalDamages)}</td>
                     <td />
                   </tr>
@@ -412,14 +412,14 @@ export default function ExpensesPage() {
         </div>
       ) : tab === 'tester' ? (
         <div className="card overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/40">
-            <h2 className="text-base font-semibold text-white">Tester Products</h2>
-            <button onClick={load} className="text-slate-500 hover:text-slate-300 transition-colors"><RefreshCw className="w-4 h-4" /></button>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700/40">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Tester Products</h2>
+            <button onClick={load} className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors"><RefreshCw className="w-4 h-4" /></button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-700/40 bg-slate-800/40">
+                <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/40">
                   <th className="text-left px-5 py-3">Product</th>
                   <th className="text-left px-5 py-3">Date</th>
                   <th className="text-left px-5 py-3">Notes</th>
@@ -430,9 +430,9 @@ export default function ExpensesPage() {
                 {testerExpenses.length === 0 ? (
                   <tr><td colSpan={4} className="text-center py-12 text-slate-500 text-sm">No tester products recorded yet</td></tr>
                 ) : testerExpenses.map(exp => (
-                  <tr key={exp.id} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
-                    <td className="px-5 py-3 font-medium text-slate-200 text-sm">{exp.title.replace(/^Tester:\s*/, '')}</td>
-                    <td className="px-5 py-3 text-sm text-slate-400">{formatDate(exp.expense_date)}</td>
+                  <tr key={exp.id} className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
+                    <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-200 text-sm">{exp.title.replace(/^Tester:\s*/, '')}</td>
+                    <td className="px-5 py-3 text-sm text-slate-600 dark:text-slate-400">{formatDate(exp.expense_date)}</td>
                     <td className="px-5 py-3 text-sm text-slate-500">{cleanNotes(exp.notes)}</td>
                     <td className="px-5 py-3 text-right font-bold font-mono text-violet-400">{formatCurrency(exp.amount)}</td>
                   </tr>
@@ -440,8 +440,8 @@ export default function ExpensesPage() {
               </tbody>
               {testerExpenses.length > 0 && (
                 <tfoot>
-                  <tr className="border-t-2 border-slate-600 bg-slate-800/60">
-                    <td colSpan={3} className="px-5 py-3 font-semibold text-slate-300">Total Tester Cost</td>
+                  <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/60">
+                    <td colSpan={3} className="px-5 py-3 font-semibold text-slate-700 dark:text-slate-300">Total Tester Cost</td>
                     <td className="px-5 py-3 text-right font-bold font-mono text-violet-400 text-base">{formatCurrency(totalTesters)}</td>
                   </tr>
                 </tfoot>
@@ -452,14 +452,14 @@ export default function ExpensesPage() {
       ) : (
         /* ALL EXPENSES TAB */
         <div className="card overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/40">
-            <h2 className="text-base font-semibold text-white">All Expenses</h2>
-            <button onClick={load} className="text-slate-500 hover:text-slate-300 transition-colors"><RefreshCw className="w-4 h-4" /></button>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700/40">
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">All Expenses</h2>
+            <button onClick={load} className="text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 transition-colors"><RefreshCw className="w-4 h-4" /></button>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-700/40 bg-slate-800/40">
+                <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/40">
                   <th className="text-left px-5 py-3">Type</th>
                   <th className="text-left px-5 py-3">Title / Product</th>
                   <th className="text-left px-5 py-3">Date</th>
@@ -473,28 +473,28 @@ export default function ExpensesPage() {
                 ) : (
                   <>
                     {normalExpenses.map(exp => (
-                      <tr key={`exp-${exp.id}`} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
+                      <tr key={`exp-${exp.id}`} className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
                         <td className="px-5 py-3"><span className="badge bg-red-500/15 text-red-400 border border-red-500/30 text-xs">Expense</span></td>
-                        <td className="px-5 py-3 font-medium text-slate-200 text-sm">{exp.title}</td>
-                        <td className="px-5 py-3 text-sm text-slate-400">{formatDate(exp.expense_date)}</td>
+                        <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-200 text-sm">{exp.title}</td>
+                        <td className="px-5 py-3 text-sm text-slate-600 dark:text-slate-400">{formatDate(exp.expense_date)}</td>
                         <td className="px-5 py-3 text-sm text-slate-500">{exp.notes || '—'}</td>
                         <td className="px-5 py-3 text-right font-bold font-mono text-red-400">{formatCurrency(exp.amount)}</td>
                       </tr>
                     ))}
                     {damaged.map(d => (
-                      <tr key={`dmg-${d.id}`} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
+                      <tr key={`dmg-${d.id}`} className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
                         <td className="px-5 py-3"><span className="badge bg-amber-500/15 text-amber-400 border border-amber-500/30 text-xs">Damaged</span></td>
-                        <td className="px-5 py-3 font-medium text-slate-200 text-sm">{d.product_name}</td>
-                        <td className="px-5 py-3 text-sm text-slate-400">{formatDate(d.damage_date)}</td>
+                        <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-200 text-sm">{d.product_name}</td>
+                        <td className="px-5 py-3 text-sm text-slate-600 dark:text-slate-400">{formatDate(d.damage_date)}</td>
                         <td className="px-5 py-3 text-sm text-slate-500">{d.notes || '—'}</td>
                         <td className="px-5 py-3 text-right font-bold font-mono text-amber-400">{formatCurrency(d.loss_amount)}</td>
                       </tr>
                     ))}
                     {testerExpenses.map(exp => (
-                      <tr key={`tst-${exp.id}`} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
+                      <tr key={`tst-${exp.id}`} className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
                         <td className="px-5 py-3"><span className="badge bg-violet-500/15 text-violet-400 border border-violet-500/30 text-xs">Tester</span></td>
-                        <td className="px-5 py-3 font-medium text-slate-200 text-sm">{exp.title.replace(/^Tester:\s*/, '')}</td>
-                        <td className="px-5 py-3 text-sm text-slate-400">{formatDate(exp.expense_date)}</td>
+                        <td className="px-5 py-3 font-medium text-slate-800 dark:text-slate-200 text-sm">{exp.title.replace(/^Tester:\s*/, '')}</td>
+                        <td className="px-5 py-3 text-sm text-slate-600 dark:text-slate-400">{formatDate(exp.expense_date)}</td>
                         <td className="px-5 py-3 text-sm text-slate-500">{cleanNotes(exp.notes)}</td>
                         <td className="px-5 py-3 text-right font-bold font-mono text-violet-400">{formatCurrency(exp.amount)}</td>
                       </tr>
@@ -504,14 +504,14 @@ export default function ExpensesPage() {
               </tbody>
               {(normalExpenses.length + damaged.length + testerExpenses.length) > 0 && (
                 <tfoot>
-                  <tr className="border-t-2 border-slate-600 bg-slate-800/60">
-                    <td colSpan={4} className="px-5 py-3 font-semibold text-slate-300">
+                  <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/60">
+                    <td colSpan={4} className="px-5 py-3 font-semibold text-slate-700 dark:text-slate-300">
                       Total Outflow
                       <span className="text-slate-500 font-normal text-xs ml-2">
                         ({normalExpenses.length} expenses · {damaged.length} damaged · {testerExpenses.length} testers)
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-right font-bold font-mono text-white text-base">{formatCurrency(totalAll)}</td>
+                    <td className="px-5 py-3 text-right font-bold font-mono text-slate-900 dark:text-white text-base">{formatCurrency(totalAll)}</td>
                   </tr>
                 </tfoot>
               )}
@@ -532,7 +532,7 @@ export default function ExpensesPage() {
             <div>
               <label className="label">Amount (रु) *</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">रु</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">रु</span>
                 <input className="input pl-9 font-mono" type="number" step="0.01" min="0.01"
                   value={expForm.amount} onChange={e => setExpForm(f => ({ ...f, amount: e.target.value }))} placeholder="0" required />
               </div>
@@ -581,7 +581,7 @@ export default function ExpensesPage() {
             <div>
               <label className="label">Cost/Unit (रु) *</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">रु</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">रु</span>
                 <input className="input pl-9 font-mono" type="number" step="0.01" min="0"
                   value={dmgForm.cost_price} onChange={e => setDmgForm(f => ({ ...f, cost_price: e.target.value }))} required />
               </div>
@@ -648,7 +648,7 @@ export default function ExpensesPage() {
             <div>
               <label className="label">Cost / Unit (रु) *</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">रु</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">रु</span>
                 <input className="input pl-9 font-mono" type="number" step="0.01" min="0"
                   value={testerForm.cost_price} onChange={e => setTesterForm(f => ({ ...f, cost_price: e.target.value }))} required />
               </div>
@@ -660,8 +660,8 @@ export default function ExpensesPage() {
             </div>
           </div>
           {testerForm.quantity && testerForm.cost_price && (
-            <div className="bg-slate-700/40 rounded-lg px-4 py-3 flex justify-between text-sm">
-              <span className="text-slate-400">Expense to record</span>
+            <div className="bg-slate-200 dark:bg-slate-700/40 rounded-lg px-4 py-3 flex justify-between text-sm">
+              <span className="text-slate-600 dark:text-slate-400">Expense to record</span>
               <span className="font-mono font-bold text-amber-400">
                 {formatCurrency((parseInt(testerForm.quantity) || 0) * (parseFloat(testerForm.cost_price) || 0))}
               </span>

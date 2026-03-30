@@ -152,8 +152,8 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
       {step === 'payment' ? (
         <div className="space-y-4">
           {/* Order Summary */}
-          <div className="bg-slate-700/40 rounded-xl p-4">
-            <p className="text-xs text-slate-400 font-medium mb-2 uppercase tracking-wide">Order Summary</p>
+          <div className="bg-slate-200 dark:bg-slate-700/40 rounded-xl p-4">
+            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mb-2 uppercase tracking-wide">Order Summary</p>
             <div className="max-h-36 overflow-y-auto space-y-1.5 mb-3">
               {items.map(item => {
                 const entered      = getItemEnteredAmount(item.product.id)
@@ -162,10 +162,10 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
                 return (
                   <div key={item.product.id} className="text-sm">
                     <div className="flex justify-between">
-                      <span className="text-slate-300 truncate flex-1 mr-2">
+                      <span className="text-slate-700 dark:text-slate-300 truncate flex-1 mr-2">
                         {item.product.name} <span className="text-slate-500">×{item.quantity}</span>
                       </span>
-                      <span className="text-white flex-shrink-0 font-mono">{formatCurrency(entered)}</span>
+                      <span className="text-slate-900 dark:text-white flex-shrink-0 font-mono">{formatCurrency(entered)}</span>
                     </div>
                     {itemDiscount > 0 && (
                       <div className="flex justify-between text-xs text-amber-400 mt-0.5">
@@ -177,14 +177,14 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
                 )
               })}
             </div>
-            <div className="border-t border-slate-600 pt-2 space-y-1">
+            <div className="border-t border-slate-300 dark:border-slate-600 pt-2 space-y-1">
               {discountAmount > 0 && (
                 <div className="flex justify-between text-sm text-amber-400">
                   <span>Total Discount</span>
                   <span>−{formatCurrency(discountAmount)}</span>
                 </div>
               )}
-              <div className="flex justify-between text-lg font-bold text-white">
+              <div className="flex justify-between text-lg font-bold text-slate-900 dark:text-white">
                 <span>Total</span>
                 <span className="text-primary-400 font-mono">{formatCurrency(total)}</span>
               </div>
@@ -212,7 +212,7 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
                   className={`flex flex-col items-center gap-1.5 py-3 px-2 rounded-xl border transition-all ${
                     paymentMethod === m.id
                       ? 'bg-primary-600 border-primary-500 text-white shadow-lg shadow-primary-900/30'
-                      : 'bg-slate-700/40 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200'
+                      : 'bg-slate-200 dark:bg-slate-700/40 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-500 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}>
                   <m.icon className="w-5 h-5" />
                   <span className="text-sm font-semibold">{m.label}</span>
@@ -228,7 +228,7 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
                 <div>
                   <p className="label">Amount Tendered</p>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">रु</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm font-medium">रु</span>
                     <input className="input pl-9 font-mono" type="number" step="1" min={total}
                       value={cashAmount || ''} onChange={e => setCashAmount(parseFloat(e.target.value) || 0)}
                       placeholder={String(Math.ceil(total))} autoFocus />
@@ -236,7 +236,7 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
                 </div>
                 <div>
                   <p className="label">Change</p>
-                  <div className="input bg-slate-900/70 font-mono font-bold text-emerald-400 flex items-center">
+                  <div className="input bg-white dark:bg-slate-900/70 font-mono font-bold text-emerald-400 flex items-center">
                     {formatCurrency(change)}
                   </div>
                 </div>
@@ -245,7 +245,7 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
                 {quickAmounts.map(amt => (
                   <button key={amt} onClick={() => setCashAmount(amt)}
                     className={`flex-1 text-xs py-2 rounded-lg transition-colors font-mono ${
-                      cashAmount === amt ? 'bg-primary-600 text-white' : 'bg-slate-700 hover:bg-slate-600 text-slate-300'
+                      cashAmount === amt ? 'bg-primary-600 text-white' : 'bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300'
                     }`}>
                     {formatCurrency(amt)}
                   </button>
@@ -265,7 +265,7 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
             <div>
               <p className="label">Online Amount (eSewa, Khalti, Bank Transfer)</p>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-medium">रु</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm font-medium">रु</span>
                 <input className="input pl-9 font-mono" type="number" step="1"
                   value={onlineAmount || ''} onChange={e => setOnlineAmount(parseFloat(e.target.value) || 0)}
                   placeholder={String(total)} autoFocus />
@@ -284,7 +284,7 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
                 <div>
                   <p className="label">Cash Amount</p>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">रु</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">रु</span>
                     <input className="input pl-9 font-mono" type="number" step="1" min={0} max={total}
                       value={cashAmount || ''} autoFocus
                       onChange={e => { const v = parseFloat(e.target.value) || 0; setCashAmount(v); setOnlineAmount(Math.max(0, round2(total - v))) }}
@@ -294,7 +294,7 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
                 <div>
                   <p className="label">Online Amount</p>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">रु</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-sm">रु</span>
                     <input className="input pl-9 font-mono" type="number" step="1" min={0} max={total}
                       value={onlineAmount || ''}
                       onChange={e => { const v = parseFloat(e.target.value) || 0; setOnlineAmount(v); setCashAmount(Math.max(0, round2(total - v))) }}
@@ -302,13 +302,13 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
                   </div>
                 </div>
               </div>
-              <div className="bg-slate-700/40 rounded-lg p-3 space-y-1.5">
+              <div className="bg-slate-200 dark:bg-slate-700/40 rounded-lg p-3 space-y-1.5">
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Total</span>
-                  <span className="text-white font-mono font-bold">{formatCurrency(total)}</span>
+                  <span className="text-slate-600 dark:text-slate-400">Total</span>
+                  <span className="text-slate-900 dark:text-white font-mono font-bold">{formatCurrency(total)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-slate-400">Paid</span>
+                  <span className="text-slate-600 dark:text-slate-400">Paid</span>
                   <span className={`font-mono font-bold ${isSplitValid() ? 'text-emerald-400' : 'text-amber-400'}`}>
                     {formatCurrency(cashAmount + onlineAmount)}
                   </span>

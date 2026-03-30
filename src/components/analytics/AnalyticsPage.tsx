@@ -179,8 +179,8 @@ export default function AnalyticsPage() {
     <div className="p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Analytics</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Daily breakdown with net profit calculation</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Analytics</h1>
+          <p className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">Daily breakdown with net profit calculation</p>
         </div>
         {hasLoaded && (
           <button onClick={handleExport} className="btn-secondary flex items-center gap-2 text-sm">
@@ -215,7 +215,7 @@ export default function AnalyticsPage() {
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
                 startDate === p.start && endDate === p.end
                   ? 'bg-primary-600 text-white'
-                  : 'bg-slate-700 text-slate-400 hover:text-slate-200'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}>
               {p.label}
             </button>
@@ -251,7 +251,7 @@ export default function AnalyticsPage() {
                 <p className={`text-lg font-bold font-mono leading-none ${s.color}`}>
                   {s.fmt ? formatCurrency(Math.abs(s.value as number)) : s.value}
                 </p>
-                <p className="text-xs text-slate-400 mt-1">{s.label}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{s.label}</p>
               </div>
             ))}
           </div>
@@ -263,7 +263,7 @@ export default function AnalyticsPage() {
                 <Banknote className="w-6 h-6 text-emerald-400" />
               </div>
               <div>
-                <p className="text-xs text-slate-400 mb-0.5">Total Cash Collected</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mb-0.5">Total Cash Collected</p>
                 <p className="text-2xl font-bold text-emerald-400 font-mono">{formatCurrency(paymentTotals.cash)}</p>
               </div>
             </div>
@@ -272,17 +272,17 @@ export default function AnalyticsPage() {
                 <Wifi className="w-6 h-6 text-blue-400" />
               </div>
               <div>
-                <p className="text-xs text-slate-400 mb-0.5">Total Online Collected</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mb-0.5">Total Online Collected</p>
                 <p className="text-2xl font-bold text-blue-400 font-mono">{formatCurrency(paymentTotals.online)}</p>
               </div>
             </div>
           </div>
 
           {/* Net Profit Formula */}
-          <div className="card p-4 bg-slate-800/60">
+          <div className="card p-4 bg-slate-100 dark:bg-slate-800/60">
             <div className="flex items-center gap-2 mb-3">
-              <Info className="w-4 h-4 text-slate-400" />
-              <p className="text-sm font-medium text-slate-300">Net Profit Calculation (Retail)</p>
+              <Info className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+              <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Net Profit Calculation (Retail)</p>
             </div>
             <div className="flex flex-wrap items-center gap-3 text-sm font-mono">
               <span className="text-emerald-400">{formatCurrency(totals.gross_profit)}</span>
@@ -304,53 +304,53 @@ export default function AnalyticsPage() {
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-4">
               <Store className="w-5 h-5 text-violet-400" />
-              <h2 className="text-base font-semibold text-white">Wholesale Summary</h2>
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">Wholesale Summary</h2>
               <span className="text-xs text-slate-500 ml-1">for selected period</span>
             </div>
             <div className="grid grid-cols-3 gap-4 mb-4">
               {[
                 { label: 'WS Revenue',      value: wholesale.total_revenue, color: 'text-violet-400' },
                 { label: 'WS Profit',       value: wholesale.total_profit,  color: 'text-emerald-400' },
-                { label: 'WS Transactions', value: wholesale.total_sales,   color: 'text-slate-300', isCnt: true },
+                { label: 'WS Transactions', value: wholesale.total_sales,   color: 'text-slate-700 dark:text-slate-300', isCnt: true },
               ].map(s => (
-                <div key={s.label} className="bg-slate-800/60 rounded-xl p-3 text-center">
+                <div key={s.label} className="bg-slate-100 dark:bg-slate-800/60 rounded-xl p-3 text-center">
                   <p className={`text-xl font-bold font-mono ${s.color}`}>
                     {s.isCnt ? s.value : formatCurrency(s.value as number)}
                   </p>
-                  <p className="text-xs text-slate-400 mt-1">{s.label}</p>
+                  <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">{s.label}</p>
                 </div>
               ))}
             </div>
 
             {/* Retail vs Wholesale comparison */}
-            <div className="border-t border-slate-700/40 pt-4">
-              <p className="text-xs text-slate-400 uppercase tracking-wide mb-3">Retail vs Wholesale</p>
+            <div className="border-t border-slate-200 dark:border-slate-700/40 pt-4">
+              <p className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">Retail vs Wholesale</p>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Retail Revenue</span>
-                    <span className="font-mono text-slate-200">{formatCurrency(totals.revenue)}</span>
+                    <span className="text-slate-600 dark:text-slate-400">Retail Revenue</span>
+                    <span className="font-mono text-slate-800 dark:text-slate-200">{formatCurrency(totals.revenue)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Wholesale Revenue</span>
+                    <span className="text-slate-600 dark:text-slate-400">Wholesale Revenue</span>
                     <span className="font-mono text-violet-400">{formatCurrency(wholesale.total_revenue)}</span>
                   </div>
-                  <div className="flex justify-between border-t border-slate-700/40 pt-2 font-bold">
-                    <span className="text-slate-300">Combined Revenue</span>
+                  <div className="flex justify-between border-t border-slate-200 dark:border-slate-700/40 pt-2 font-bold">
+                    <span className="text-slate-700 dark:text-slate-300">Combined Revenue</span>
                     <span className="font-mono text-white">{formatCurrency(totalCombinedRevenue)}</span>
                   </div>
                 </div>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Retail Net Profit</span>
+                    <span className="text-slate-600 dark:text-slate-400">Retail Net Profit</span>
                     <span className={`font-mono ${totals.net_profit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatCurrency(totals.net_profit)}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Wholesale Profit</span>
+                    <span className="text-slate-600 dark:text-slate-400">Wholesale Profit</span>
                     <span className="font-mono text-violet-400">{formatCurrency(wholesale.total_profit)}</span>
                   </div>
-                  <div className="flex justify-between border-t border-slate-700/40 pt-2 font-bold">
-                    <span className="text-slate-300">Combined Profit</span>
+                  <div className="flex justify-between border-t border-slate-200 dark:border-slate-700/40 pt-2 font-bold">
+                    <span className="text-slate-700 dark:text-slate-300">Combined Profit</span>
                     <span className={`font-mono ${totalCombinedProfit >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>{formatCurrency(totalCombinedProfit)}</span>
                   </div>
                 </div>
@@ -361,7 +361,7 @@ export default function AnalyticsPage() {
           {/* Chart */}
           {chartData.length > 0 && (
             <div className="card p-5">
-              <h2 className="text-base font-semibold text-white mb-4">Daily Revenue & Profit</h2>
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Daily Revenue & Profit</h2>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
@@ -384,8 +384,8 @@ export default function AnalyticsPage() {
 
           {/* Day-by-day table */}
           <div className="card overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-700/40">
-              <h2 className="text-base font-semibold text-white">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200 dark:border-slate-700/40">
+              <h2 className="text-base font-semibold text-slate-900 dark:text-white">
                 Daily Breakdown
                 <span className="text-slate-500 text-sm font-normal ml-2">{startDate} to {endDate}</span>
               </h2>
@@ -396,7 +396,7 @@ export default function AnalyticsPage() {
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-700/40 bg-slate-800/40">
+                  <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/40">
                     <th className="text-left px-5 py-3">Date</th>
                     <th className="text-right px-5 py-3">Sales</th>
                     <th className="text-right px-5 py-3">Revenue</th>
@@ -408,10 +408,10 @@ export default function AnalyticsPage() {
                 </thead>
                 <tbody>
                   {rows.map(r => (
-                    <tr key={r.date} className={`border-b border-slate-700/30 transition-colors ${r.revenue > 0 || r.expenses > 0 || r.damages > 0 ? 'hover:bg-slate-700/20' : 'opacity-40'}`}>
-                      <td className="px-5 py-2.5 text-sm text-slate-300 whitespace-nowrap">{formatDate(r.date)}</td>
-                      <td className="px-5 py-2.5 text-right text-sm text-slate-400 font-mono">{r.sales || '—'}</td>
-                      <td className="px-5 py-2.5 text-right font-mono text-sm text-slate-200">{r.revenue > 0 ? formatCurrency(r.revenue) : '—'}</td>
+                    <tr key={r.date} className={`border-b border-slate-200 dark:border-slate-700/30 transition-colors ${r.revenue > 0 || r.expenses > 0 || r.damages > 0 ? 'hover:bg-slate-200 dark:hover:bg-slate-700/20' : 'opacity-40'}`}>
+                      <td className="px-5 py-2.5 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">{formatDate(r.date)}</td>
+                      <td className="px-5 py-2.5 text-right text-sm text-slate-600 dark:text-slate-400 font-mono">{r.sales || '—'}</td>
+                      <td className="px-5 py-2.5 text-right font-mono text-sm text-slate-800 dark:text-slate-200">{r.revenue > 0 ? formatCurrency(r.revenue) : '—'}</td>
                       <td className={`px-5 py-2.5 text-right font-mono text-sm ${r.gross_profit > 0 ? 'text-emerald-400' : r.gross_profit < 0 ? 'text-red-400' : 'text-slate-600'}`}>
                         {r.gross_profit !== 0 ? formatCurrency(r.gross_profit) : '—'}
                       </td>
@@ -428,9 +428,9 @@ export default function AnalyticsPage() {
                   ))}
                 </tbody>
                 <tfoot>
-                  <tr className="border-t-2 border-slate-600 bg-slate-800/80 font-bold">
-                    <td className="px-5 py-3 text-slate-200">TOTAL</td>
-                    <td className="px-5 py-3 text-right font-mono text-slate-200">{totals.sales}</td>
+                  <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/80 font-bold">
+                    <td className="px-5 py-3 text-slate-800 dark:text-slate-200">TOTAL</td>
+                    <td className="px-5 py-3 text-right font-mono text-slate-800 dark:text-slate-200">{totals.sales}</td>
                     <td className="px-5 py-3 text-right font-mono text-white">{formatCurrency(totals.revenue)}</td>
                     <td className="px-5 py-3 text-right font-mono text-emerald-400">{formatCurrency(totals.gross_profit)}</td>
                     <td className="px-5 py-3 text-right font-mono text-red-400">{totals.expenses > 0 ? `−${formatCurrency(totals.expenses)}` : '—'}</td>

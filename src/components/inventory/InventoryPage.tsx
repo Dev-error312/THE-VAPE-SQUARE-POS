@@ -115,7 +115,7 @@ export default function InventoryPage() {
 
   const Th = ({ label, k, right }: { label: string; k: SortKey; right?: boolean }) => (
     <th onClick={() => handleSort(k)}
-      className={`px-4 py-3 text-xs font-semibold text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-200 select-none transition-colors whitespace-nowrap ${right ? 'text-right' : 'text-left'}`}>
+      className={`px-4 py-3 text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide cursor-pointer hover:text-slate-900 dark:hover:text-slate-200 select-none transition-colors whitespace-nowrap ${right ? 'text-right' : 'text-left'}`}>
       <span className="inline-flex items-center gap-1">{label} <SortIcon k={k} /></span>
     </th>
   )
@@ -129,8 +129,8 @@ export default function InventoryPage() {
     <div className="p-4 sm:p-6 space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">Inventory</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Manage products and stock levels</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Inventory</h1>
+          <p className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">Manage products and stock levels</p>
         </div>
         {isAdmin && (
           <button onClick={() => { setSelectedProduct(null); setShowProductForm(true) }}
@@ -155,8 +155,8 @@ export default function InventoryPage() {
               <s.icon className={`w-5 h-5 ${s.color}`} />
             </div>
             <div>
-              <p className="text-2xl font-bold text-white leading-none">{s.value}</p>
-              <p className="text-xs text-slate-400 mt-0.5">{s.label}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white leading-none">{s.value}</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-0.5">{s.label}</p>
             </div>
           </div>
         ))}
@@ -165,7 +165,7 @@ export default function InventoryPage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 dark:text-slate-400" />
           <input className="input pl-9" placeholder="Search name or brand..."
             value={search} onChange={e => setSearch(e.target.value)} />
         </div>
@@ -193,7 +193,7 @@ export default function InventoryPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="border-b border-slate-700/60 bg-slate-800/50">
+              <thead className="border-b border-slate-200 dark:border-slate-700/60 bg-slate-100 dark:bg-slate-800/50">
                 <tr>
                   <Th label="Product Name" k="name" />
                   <Th label="Brand"        k="name" />
@@ -202,13 +202,13 @@ export default function InventoryPage() {
                   <Th label="Stock"        k="total_stock"   right />
                   {isAdmin && <Th label="Cost Price" k="avg_cost"      right />}
                   {isAdmin && (
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-400 uppercase tracking-wide whitespace-nowrap">
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide whitespace-nowrap">
                       Stock Value
                     </th>
                   )}
                   <Th label="Selling Price" k="selling_price" right />
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-400 uppercase tracking-wide">Status</th>
-                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-400 uppercase tracking-wide">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Status</th>
+                  <th className="px-4 py-3 text-center text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -229,32 +229,32 @@ export default function InventoryPage() {
                   const stockValue = stock * costPrice
                   const status     = stockStatus(stock)
                   return (
-                    <tr key={product.id} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
+                    <tr key={product.id} className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
                       <td className="px-4 py-3">
-                        <p className="font-medium text-slate-200 text-sm truncate max-w-[160px]">{product.name}</p>
+                        <p className="font-medium text-slate-800 dark:text-slate-200 text-sm truncate max-w-[160px]">{product.name}</p>
                       </td>
-                      <td className="px-4 py-3 text-sm text-slate-400 max-w-[100px] truncate">{product.brand || <span className="text-slate-600">—</span>}</td>
-                      <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">{product.category_name || <span className="text-slate-600">—</span>}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 max-w-[100px] truncate">{product.brand || <span className="text-slate-600">—</span>}</td>
+                      <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">{product.category_name || <span className="text-slate-600">—</span>}</td>
                       {isAdmin && (
-                        <td className="px-4 py-3 text-sm text-slate-400 whitespace-nowrap">{product.supplier_name || <span className="text-slate-600">—</span>}</td>
+                        <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 whitespace-nowrap">{product.supplier_name || <span className="text-slate-600">—</span>}</td>
                       )}
                       <td className="px-4 py-3 text-right">
-                        <span className={`font-bold font-mono text-sm ${stock === 0 ? 'text-red-400' : stock < 10 ? 'text-amber-400' : 'text-white'}`}>
+                        <span className={`font-bold font-mono text-sm ${stock === 0 ? 'text-red-400' : stock < 10 ? 'text-amber-400' : 'text-slate-900 dark:text-white'}`}>
                           {stock}
                         </span>
                         <span className="text-xs text-slate-500 ml-1">{product.unit}</span>
                       </td>
                       {isAdmin && (
-                        <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
+                        <td className="px-4 py-3 text-right font-mono text-sm text-slate-700 dark:text-slate-300">
                           {costPrice > 0 ? formatCurrency(costPrice) : <span className="text-slate-600">—</span>}
                         </td>
                       )}
                       {isAdmin && (
-                        <td className="px-4 py-3 text-right font-mono text-sm text-slate-300">
+                        <td className="px-4 py-3 text-right font-mono text-sm text-slate-700 dark:text-slate-300">
                           {stockValue > 0 ? formatCurrency(stockValue) : <span className="text-slate-600">—</span>}
                         </td>
                       )}
-                      <td className="px-4 py-3 text-right font-mono font-semibold text-white text-sm">
+                      <td className="px-4 py-3 text-right font-mono font-semibold text-slate-900 dark:text-white text-sm">
                         {formatCurrency(product.selling_price)}
                       </td>
                       <td className="px-4 py-3">
@@ -288,14 +288,14 @@ export default function InventoryPage() {
               {/* Footer totals — admin only (contains cost-based figures) */}
               {!loading && filtered.length > 0 && isAdmin && (
                 <tfoot>
-                  <tr className="border-t-2 border-slate-600 bg-slate-800/70 font-semibold">
-                    <td className="px-4 py-3 text-sm text-slate-300" colSpan={4}>
+                  <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/70 font-semibold">
+                    <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300" colSpan={4}>
                       {categoryFilter
                         ? `Totals: ${categories.find(c => c.id === categoryFilter)?.name || 'Category'}`
                         : 'Totals: All Products'}
                       <span className="text-slate-500 font-normal ml-1">({filtered.length} items)</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-white font-bold">{totals.qty}</td>
+                    <td className="px-4 py-3 text-right font-mono text-slate-900 dark:text-white font-bold">{totals.qty}</td>
                     <td className="px-4 py-3" />
                     <td className="px-4 py-3 text-right font-mono text-amber-400 text-sm">{formatCurrency(totals.stockValue)}</td>
                     <td className="px-4 py-3 text-right font-mono text-violet-400 text-sm">{formatCurrency(totals.sellValue)}</td>
@@ -306,7 +306,7 @@ export default function InventoryPage() {
                     </td>
                     <td />
                   </tr>
-                  <tr className="bg-slate-800/40 text-xs text-slate-500">
+                  <tr className="bg-slate-100 dark:bg-slate-800/40 text-xs text-slate-500">
                     <td colSpan={4} className="px-4 py-1.5">
                       Selling Value vs Cost — {formatCurrency(totals.sellValue)} − {formatCurrency(totals.stockValue)} = {formatCurrency(totals.potProfit)}
                     </td>
@@ -318,12 +318,12 @@ export default function InventoryPage() {
               {/* Cashier footer — stock count only */}
               {!loading && filtered.length > 0 && !isAdmin && (
                 <tfoot>
-                  <tr className="border-t-2 border-slate-600 bg-slate-800/70 font-semibold">
-                    <td className="px-4 py-3 text-sm text-slate-300" colSpan={3}>
+                  <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/70 font-semibold">
+                    <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300" colSpan={3}>
                       Totals
                       <span className="text-slate-500 font-normal ml-1">({filtered.length} items)</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-mono text-white font-bold">{totals.qty}</td>
+                    <td className="px-4 py-3 text-right font-mono text-slate-900 dark:text-white font-bold">{totals.qty}</td>
                     <td className="px-4 py-3 text-right font-mono text-violet-400 text-sm">{formatCurrency(totals.sellValue)}</td>
                     <td colSpan={2} />
                   </tr>
@@ -334,7 +334,7 @@ export default function InventoryPage() {
         )}
 
         {!loading && filtered.length > 0 && (
-          <div className="px-4 py-2.5 border-t border-slate-700/40 bg-slate-800/30">
+          <div className="px-4 py-2.5 border-t border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/30">
             <p className="text-xs text-slate-500">Showing {filtered.length} of {products.length} products</p>
           </div>
         )}

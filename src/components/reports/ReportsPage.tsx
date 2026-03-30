@@ -30,7 +30,7 @@ const restockBadgeCls = (type: string) => {
   if (type === 'full')    return 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
   if (type === 'credit')  return 'bg-red-500/15 text-red-400 border border-red-500/30'
   if (type === 'partial') return 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
-  return 'bg-slate-700 text-slate-300'
+  return 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
 }
 
 export default function ReportsPage() {
@@ -250,14 +250,14 @@ export default function ReportsPage() {
 
       {/* heading */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Reports</h1>
-        <p className="text-slate-400 text-sm mt-0.5">
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Reports</h1>
+        <p className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">
           Sales history, profit analysis, and restock tracking
         </p>
       </div>
 
       {/* ── Tab switcher ────────────────────────────────────────────────── */}
-      <div className="flex gap-1 bg-slate-800/60 p-1 rounded-xl w-fit">
+      <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/60 p-1 rounded-xl w-fit">
         {([
           { id: 'sales',    label: 'Sales',    icon: ShoppingBag, adminOnly: false },
           { id: 'restocks', label: 'Restocks', icon: Package,     adminOnly: true  },
@@ -270,7 +270,7 @@ export default function ReportsPage() {
               className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                 activeTab === t.id
                   ? 'bg-primary-600 text-white shadow'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               <t.icon className="w-4 h-4" />
@@ -382,10 +382,10 @@ export default function ReportsPage() {
                       <s.icon className={`w-5 h-5 ${s.color}`} />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-lg font-bold text-white font-mono leading-none truncate">
+                      <p className="text-lg font-bold text-slate-900 dark:text-white font-mono leading-none truncate">
                         {s.value}
                       </p>
-                      <p className="text-xs font-medium text-slate-400 mt-0.5">{s.label}</p>
+                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-0.5">{s.label}</p>
                       {s.sub && <p className="text-xs text-slate-500">{s.sub}</p>}
                     </div>
                   </div>
@@ -405,7 +405,7 @@ export default function ReportsPage() {
                   <p className="text-lg font-bold text-emerald-400 font-mono leading-none truncate">
                     {formatCurrency(paymentTotals.cash)}
                   </p>
-                  <p className="text-xs font-medium text-slate-400 mt-0.5">Cash Collected</p>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-0.5">Cash Collected</p>
                   <p className="text-xs text-slate-500 hidden sm:block">Includes split cash portions</p>
                 </div>
               </div>
@@ -417,7 +417,7 @@ export default function ReportsPage() {
                   <p className="text-lg font-bold text-blue-400 font-mono leading-none truncate">
                     {formatCurrency(paymentTotals.online)}
                   </p>
-                  <p className="text-xs font-medium text-slate-400 mt-0.5">Online Collected</p>
+                  <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-0.5">Online Collected</p>
                   <p className="text-xs text-slate-500 hidden sm:block">eSewa, Khalti, bank transfer</p>
                 </div>
               </div>
@@ -426,7 +426,7 @@ export default function ReportsPage() {
             {/* ── Bar chart ────────────────────────────────────────────── */}
             {chartData.length > 0 && (
               <div className="card p-5">
-                <h2 className="text-base font-semibold text-white mb-4">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">
                   Daily Revenue{isAdmin ? ' & Profit' : ''}
                 </h2>
                 <ResponsiveContainer width="100%" height={220}>
@@ -453,8 +453,8 @@ export default function ReportsPage() {
 
             {/* ── Transactions table ───────────────────────────────────── */}
             <div className="card overflow-hidden">
-              <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-slate-700/40 gap-3">
-                <h2 className="text-base font-semibold text-white flex-shrink-0">
+              <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-slate-200 dark:border-slate-700/40 gap-3">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white flex-shrink-0">
                   Transactions{' '}
                   <span className="text-slate-500 text-sm font-normal">({filtered.length})</span>
                 </h2>
@@ -483,7 +483,7 @@ export default function ReportsPage() {
                         9  Actions       always
                   ─── */}
                   <thead>
-                    <tr className="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-700/40 bg-slate-800/40">
+                    <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/40">
                       <th className="text-left px-4 py-3 whitespace-nowrap">Invoice</th>
                       <th className="text-left px-4 py-3 whitespace-nowrap hidden sm:table-cell">Date</th>
                       <th className="text-left px-4 py-3 whitespace-nowrap hidden md:table-cell">Products</th>
@@ -520,31 +520,31 @@ export default function ReportsPage() {
 
                       return (
                         <tr key={sale.id}
-                          className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
+                          className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
                           {/* 1 Invoice */}
                           <td className="px-4 py-3 font-mono text-xs text-primary-400 whitespace-nowrap">
                             {sale.sale_number}
                           </td>
                           {/* 2 Date */}
-                          <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap hidden sm:table-cell">
+                          <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap hidden sm:table-cell">
                             {dateStr} {timeStr}
                           </td>
                           {/* 3 Products */}
-                          <td className="px-4 py-3 text-xs text-slate-300 max-w-[140px] truncate hidden md:table-cell">
+                          <td className="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[140px] truncate hidden md:table-cell">
                             {label || '—'}
                           </td>
                           {/* 4 Qty */}
-                          <td className="px-4 py-3 text-right text-sm font-mono text-slate-300 hidden sm:table-cell">
+                          <td className="px-4 py-3 text-right text-sm font-mono text-slate-700 dark:text-slate-300 hidden sm:table-cell">
                             {totalQty}
                           </td>
                           {/* 5 Payment */}
                           <td className="px-4 py-3 hidden sm:table-cell">
-                            <span className="badge bg-slate-700 text-slate-300 text-xs">
+                            <span className="badge bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs">
                               {fmtPayment(sale.payment_method)}
                             </span>
                           </td>
                           {/* 6 Revenue */}
-                          <td className="px-4 py-3 text-right font-bold font-mono text-white whitespace-nowrap text-sm">
+                          <td className="px-4 py-3 text-right font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap text-sm">
                             {formatCurrency(sale.total)}
                           </td>
                           {/* 7 Profit */}
@@ -605,9 +605,9 @@ export default function ReportsPage() {
                       ), 0)
                     return (
                       <tfoot>
-                        <tr className="border-t-2 border-slate-600 bg-slate-800/70 font-semibold">
+                        <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/70 font-semibold">
                           {/* 1 — label */}
-                          <td className="px-4 py-3 text-sm text-slate-300 whitespace-nowrap">
+                          <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
                             Totals{' '}
                             <span className="text-slate-500 font-normal hidden sm:inline">
                               ({filtered.length} transactions)
@@ -618,13 +618,13 @@ export default function ReportsPage() {
                           {/* 3 — products (blank) */}
                           <td className="px-4 py-3 hidden md:table-cell" />
                           {/* 4 — qty */}
-                          <td className="px-4 py-3 text-right font-mono text-white hidden sm:table-cell">
+                          <td className="px-4 py-3 text-right font-mono text-slate-900 dark:text-white hidden sm:table-cell">
                             {fQty}
                           </td>
                           {/* 5 — payment (blank) */}
                           <td className="px-4 py-3 hidden sm:table-cell" />
                           {/* 6 — revenue */}
-                          <td className="px-4 py-3 text-right font-bold font-mono text-white whitespace-nowrap">
+                          <td className="px-4 py-3 text-right font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
                             {formatCurrency(fRevenue)}
                           </td>
                           {/* 7 — profit */}
@@ -690,7 +690,7 @@ export default function ReportsPage() {
                     <p className={`text-lg font-bold font-mono leading-none truncate ${s.color}`}>
                       {s.fmt ? formatCurrency(s.value as number) : s.value}
                     </p>
-                    <p className="text-xs font-medium text-slate-400 mt-0.5">{s.label}</p>
+                    <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-0.5">{s.label}</p>
                   </div>
                 </div>
               ))}
@@ -698,8 +698,8 @@ export default function ReportsPage() {
 
             {/* ── Restock history table ─────────────────────────────────── */}
             <div className="card overflow-hidden">
-              <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-slate-700/40">
-                <h2 className="text-base font-semibold text-white">
+              <div className="flex items-center justify-between px-4 sm:px-5 py-4 border-b border-slate-200 dark:border-slate-700/40">
+                <h2 className="text-base font-semibold text-slate-900 dark:text-white">
                   Restock History{' '}
                   <span className="text-slate-500 text-sm font-normal">({restocks.length} records)</span>
                 </h2>
@@ -713,7 +713,7 @@ export default function ReportsPage() {
                       (*) hidden below sm  (**) hidden below md  (***) hidden below lg
                   ─── */}
                   <thead>
-                    <tr className="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-700/40 bg-slate-800/40">
+                    <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/40">
                       <th className="text-left  px-4 py-3 whitespace-nowrap">Date</th>
                       <th className="text-left  px-4 py-3 whitespace-nowrap">Product</th>
                       <th className="text-right px-4 py-3 whitespace-nowrap">Qty</th>
@@ -736,17 +736,17 @@ export default function ReportsPage() {
                       </tr>
                     ) : restocks.map(r => (
                       <tr key={r.id}
-                        className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
-                        <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap">
+                        className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
+                        <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">
                           {formatDate(r.received_at)}
                         </td>
-                        <td className="px-4 py-3 font-medium text-slate-200 text-sm max-w-[160px] truncate">
+                        <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200 text-sm max-w-[160px] truncate">
                           {r.product_name}
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-white font-semibold">
+                        <td className="px-4 py-3 text-right font-mono text-slate-900 dark:text-white font-semibold">
                           {r.quantity}
                         </td>
-                        <td className="px-4 py-3 text-right font-mono text-slate-300 text-sm hidden sm:table-cell">
+                        <td className="px-4 py-3 text-right font-mono text-slate-700 dark:text-slate-300 text-sm hidden sm:table-cell">
                           {r.cost_price > 0
                             ? formatCurrency(r.cost_price)
                             : <span className="text-slate-600">—</span>}
@@ -767,7 +767,7 @@ export default function ReportsPage() {
                         }`}>
                           {r.remaining_amount > 0 ? formatCurrency(r.remaining_amount) : '—'}
                         </td>
-                        <td className="px-4 py-3 text-sm text-slate-400 max-w-[120px] truncate hidden lg:table-cell">
+                        <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 max-w-[120px] truncate hidden lg:table-cell">
                           {r.supplier_name ?? <span className="text-slate-600">—</span>}
                         </td>
                       </tr>
@@ -777,9 +777,9 @@ export default function ReportsPage() {
                   {/* ─── Restock footer — mirrors header exactly ─── */}
                   {restocks.length > 0 && (
                     <tfoot>
-                      <tr className="border-t-2 border-slate-600 bg-slate-800/70 font-semibold">
+                      <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/70 font-semibold">
                         {/* Date — label */}
-                        <td className="px-4 py-3 text-sm text-slate-300 whitespace-nowrap">
+                        <td className="px-4 py-3 text-sm text-slate-700 dark:text-slate-300 whitespace-nowrap">
                           Totals{' '}
                           <span className="text-slate-500 font-normal hidden sm:inline">
                             ({restocks.length})
@@ -788,7 +788,7 @@ export default function ReportsPage() {
                         {/* Product — blank */}
                         <td className="px-4 py-3" />
                         {/* Qty */}
-                        <td className="px-4 py-3 text-right font-mono text-white">
+                        <td className="px-4 py-3 text-right font-mono text-slate-900 dark:text-white">
                           {restockTotals.qty}
                         </td>
                         {/* Cost/Unit — blank */}

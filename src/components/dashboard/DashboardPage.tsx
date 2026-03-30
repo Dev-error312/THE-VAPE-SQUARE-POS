@@ -94,7 +94,7 @@ export default function DashboardPage() {
   ].filter(c => !c.adminOnly || isAdmin)
 
   const stockCards = [
-    { label: 'Stock Value (Cost)',    value: formatCurrency(stats?.total_stock_value       || 0), icon: Package,    color: 'text-slate-300',   bg: 'bg-slate-500/10',   sub: 'Current inventory at cost' },
+    { label: 'Stock Value (Cost)',    value: formatCurrency(stats?.total_stock_value       || 0), icon: Package,    color: 'text-slate-700 dark:text-slate-300',   bg: 'bg-slate-500/10',   sub: 'Current inventory at cost' },
     { label: 'Potential Revenue',     value: formatCurrency(stats?.potential_selling_value || 0), icon: TrendingUp, color: 'text-blue-400',    bg: 'bg-blue-500/10',    sub: 'If all stock is sold' },
     { label: 'Potential Profit',      value: formatCurrency(stats?.potential_profit        || 0), icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-500/10', sub: 'Revenue − cost of stock' },
   ]
@@ -103,8 +103,8 @@ export default function DashboardPage() {
     <div className="p-4 sm:p-6 space-y-5">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Business overview at a glance</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+          <p className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">Business overview at a glance</p>
         </div>
         <button onClick={load} className="btn-secondary flex items-center gap-2 text-sm">
           <RefreshCw className="w-4 h-4" /> Refresh
@@ -118,8 +118,8 @@ export default function DashboardPage() {
             <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center mb-3`}>
               <card.icon className={`w-5 h-5 ${card.color}`} />
             </div>
-            <p className="text-xl sm:text-2xl font-bold text-white font-mono truncate">{card.value}</p>
-            <p className="text-sm font-medium text-slate-300 mt-1">{card.label}</p>
+            <p className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-mono truncate">{card.value}</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mt-1">{card.label}</p>
             <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">{card.sub}</p>
           </div>
         ))}
@@ -128,7 +128,7 @@ export default function DashboardPage() {
       {/* Stock Valuation — admin only */}
       {isAdmin && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-wide mb-3">Stock Valuation</h2>
+          <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">Stock Valuation</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {stockCards.map(card => (
               <div key={card.label} className="card p-4 sm:p-5">
@@ -136,7 +136,7 @@ export default function DashboardPage() {
                   <card.icon className={`w-5 h-5 ${card.color}`} />
                 </div>
                 <p className={`text-xl font-bold font-mono ${card.color}`}>{card.value}</p>
-                <p className="text-sm font-medium text-slate-300 mt-1">{card.label}</p>
+                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mt-1">{card.label}</p>
                 <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">{card.sub}</p>
               </div>
             ))}
@@ -147,7 +147,7 @@ export default function DashboardPage() {
       {/* Chart + Low Stock */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
         <div className="card p-5 xl:col-span-2">
-          <h2 className="text-base font-semibold text-white mb-4">Revenue & Profit (7 days)</h2>
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Revenue & Profit (7 days)</h2>
           <ResponsiveContainer width="100%" height={200}>
             <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
               <defs>
@@ -180,7 +180,7 @@ export default function DashboardPage() {
         <div className="card p-5">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle className="w-4 h-4 text-amber-400" />
-            <h2 className="text-base font-semibold text-white">Low Stock</h2>
+            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Low Stock</h2>
             {lowStock.length > 0 && (
               <span className="ml-auto badge bg-amber-500/20 text-amber-400 text-xs">{lowStock.length}</span>
             )}
@@ -193,9 +193,9 @@ export default function DashboardPage() {
           ) : (
             <div className="space-y-2 overflow-y-auto max-h-52">
               {lowStock.map(p => (
-                <div key={p.id} className="flex items-center justify-between py-2 border-b border-slate-700/40 last:border-0">
+                <div key={p.id} className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-slate-700/40 last:border-0">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-200 truncate">{p.name}</p>
+                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{p.name}</p>
                     {p.brand && <p className="text-xs text-slate-500 truncate">{p.brand}</p>}
                   </div>
                   <span className={`badge ml-2 flex-shrink-0 ${(p.total_stock || 0) === 0
@@ -212,14 +212,14 @@ export default function DashboardPage() {
 
       {/* Recent Sales */}
       <div className="card overflow-hidden">
-        <div className="flex items-center gap-2 px-4 sm:px-5 py-4 border-b border-slate-700/40">
-          <ShoppingCart className="w-4 h-4 text-slate-400" />
-          <h2 className="text-base font-semibold text-white">Recent Sales</h2>
+        <div className="flex items-center gap-2 px-4 sm:px-5 py-4 border-b border-slate-200 dark:border-slate-700/40">
+          <ShoppingCart className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Recent Sales</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-700/40 bg-slate-800/40">
+              <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/40">
                 <th className="text-left px-4 py-3">Invoice</th>
                 <th className="text-left px-4 py-3 hidden sm:table-cell">Date</th>
                 <th className="text-left px-4 py-3">Products</th>
@@ -235,15 +235,15 @@ export default function DashboardPage() {
               ) : recentSales.map(sale => {
                 const { label, qty } = summariseItems(sale)
                 return (
-                  <tr key={sale.id} className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
+                  <tr key={sale.id} className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
                     <td className="px-4 py-3 font-mono text-xs text-primary-400 whitespace-nowrap">{sale.sale_number}</td>
-                    <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap hidden sm:table-cell">{formatDate(sale.created_at)}</td>
-                    <td className="px-4 py-3 text-xs text-slate-300 max-w-[120px] sm:max-w-[200px] truncate">{label}</td>
-                    <td className="px-4 py-3 text-right text-sm font-mono text-slate-300 hidden sm:table-cell">{qty}</td>
+                    <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap hidden sm:table-cell">{formatDate(sale.created_at)}</td>
+                    <td className="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[120px] sm:max-w-[200px] truncate">{label}</td>
+                    <td className="px-4 py-3 text-right text-sm font-mono text-slate-700 dark:text-slate-300 hidden sm:table-cell">{qty}</td>
                     <td className="px-4 py-3 hidden sm:table-cell">
-                      <span className="badge bg-slate-700 text-slate-300 text-xs">{paymentLabel(sale.payment_method)}</span>
+                      <span className="badge bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs">{paymentLabel(sale.payment_method)}</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-bold font-mono text-white whitespace-nowrap text-sm">{formatCurrency(sale.total)}</td>
+                    <td className="px-4 py-3 text-right font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap text-sm">{formatCurrency(sale.total)}</td>
                     <td className="px-4 py-3">
                       <span className={`badge text-xs capitalize ${sale.status === 'completed'
                         ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'

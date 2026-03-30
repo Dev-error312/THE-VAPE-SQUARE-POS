@@ -21,12 +21,12 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
   const total          = getTotal()
 
   return (
-    <div className="flex flex-col h-full bg-slate-900">
+    <div className="flex flex-col h-full bg-white dark:bg-slate-900">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800">
         <div className="flex items-center gap-2">
           <ShoppingCart className="w-4 h-4 text-primary-400" />
-          <span className="font-semibold text-white text-sm">Cart</span>
+          <span className="font-semibold text-slate-900 dark:text-white text-sm">Cart</span>
           {items.length > 0 && (
             <span className="bg-primary-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
               {items.reduce((s, i) => s + i.quantity, 0)}
@@ -62,7 +62,7 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                   {/* Product name + remove */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-200 truncate leading-tight">
+                      <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate leading-tight">
                         {item.product.name}
                       </p>
                       <p className="text-xs text-slate-500 mt-0.5 font-mono">
@@ -80,8 +80,8 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                      className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors border border-slate-700">
-                      <Minus className="w-3 h-3 text-slate-300" />
+                      className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors border border-slate-200 dark:border-slate-700">
+                      <Minus className="w-3 h-3 text-slate-700 dark:text-slate-300" />
                     </button>
                     <input
                       type="number"
@@ -90,14 +90,14 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                         const v = parseInt(e.target.value) || 0
                         updateQuantity(item.product.id, Math.min(v, item.product.total_stock || 999))
                       }}
-                      className="w-10 text-center bg-slate-800 border border-slate-700 rounded text-sm text-white py-1 font-mono"
+                      className="w-10 text-center bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded text-sm text-slate-900 dark:text-white py-1 font-mono"
                       min="1" max={item.product.total_stock}
                     />
                     <button
                       onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
                       disabled={item.quantity >= (item.product.total_stock || 0)}
-                      className="w-8 h-8 rounded-lg bg-slate-800 hover:bg-slate-700 flex items-center justify-center transition-colors border border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed">
-                      <Plus className="w-3 h-3 text-slate-300" />
+                      className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 flex items-center justify-center transition-colors border border-slate-200 dark:border-slate-700 disabled:opacity-30 disabled:cursor-not-allowed">
+                      <Plus className="w-3 h-3 text-slate-700 dark:text-slate-300" />
                     </button>
                     <span className="text-xs text-slate-600 ml-1">
                       {item.product.total_stock || 0} left
@@ -105,11 +105,11 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                   </div>
 
                   {/* Amount received input */}
-                  <div className="bg-slate-800/60 rounded-lg p-2.5 space-y-1.5">
+                  <div className="bg-slate-100 dark:bg-slate-800/60 rounded-lg p-2.5 space-y-1.5">
                     <div className="flex items-center gap-2">
-                      <label className="text-xs text-slate-400 whitespace-nowrap">Amount Received</label>
+                      <label className="text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap">Amount Received</label>
                       <div className="relative flex-1">
-                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs">रु</span>
+                        <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 text-xs">रु</span>
                         <input
                           type="number"
                           step="1"
@@ -118,13 +118,13 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                           value={entered === 0 ? '' : entered}
                           onChange={e => setEnteredAmount(item.product.id, parseFloat(e.target.value) || 0)}
                           placeholder={String(listPrice)}
-                          className="w-full pl-8 pr-2 py-1.5 bg-slate-900 border border-slate-700 rounded text-sm font-mono text-white focus:border-primary-500 focus:outline-none"
+                          className="w-full pl-8 pr-2 py-1.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-sm font-mono text-slate-900 dark:text-white focus:border-primary-500 focus:outline-none"
                         />
                       </div>
                       {itemDiscount > 0 && (
                         <button
                           onClick={() => setEnteredAmount(item.product.id, listPrice)}
-                          className="text-xs text-slate-500 hover:text-slate-300 whitespace-nowrap transition-colors">
+                          className="text-xs text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 whitespace-nowrap transition-colors">
                           Full
                         </button>
                       )}
@@ -155,9 +155,9 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
 
       {/* Totals + Checkout */}
       {items.length > 0 && (
-        <div className="border-t border-slate-800 px-4 py-4 space-y-3 bg-slate-900">
+        <div className="border-t border-slate-200 dark:border-slate-800 px-4 py-4 space-y-3 bg-white dark:bg-slate-900">
           <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between text-slate-400">
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span>List Price Total</span>
               <span className="font-mono">{formatCurrency(subtotal)}</span>
             </div>
@@ -167,7 +167,7 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                 <span className="font-mono">−{formatCurrency(discountAmount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-white font-bold text-base pt-1.5 border-t border-slate-800">
+            <div className="flex justify-between text-slate-900 dark:text-white font-bold text-base pt-1.5 border-t border-slate-200 dark:border-slate-800">
               <span>Total Received</span>
               <span className="text-primary-400 font-mono">{formatCurrency(total)}</span>
             </div>

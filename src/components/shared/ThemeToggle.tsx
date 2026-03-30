@@ -15,18 +15,20 @@ export default function ThemeToggle() {
   const { theme, setTheme } = useTheme()
 
   return (
-    <div className="flex items-center gap-1 bg-slate-950/60 dark:bg-slate-950/60 rounded-lg p-0.5 w-full">
+    <div className="flex items-center gap-1 rounded-lg p-0.5 w-full bg-slate-200/80 dark:bg-slate-950/60 border border-slate-300/70 dark:border-slate-800/80">
       {OPTIONS.map(({ mode, icon: Icon, label }) => (
         <button
           key={mode}
           onClick={() => setTheme(mode)}
           title={label}
+          aria-label={`Switch theme to ${label}`}
+          aria-pressed={theme === mode}
           className={`
             flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-md
             text-xs font-medium transition-all duration-150
             ${theme === mode
               ? 'bg-primary-600 text-white shadow-sm'
-              : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700/50'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-300/80 dark:text-slate-500 dark:hover:text-slate-300 dark:hover:bg-slate-700/50'
             }
           `}
         >

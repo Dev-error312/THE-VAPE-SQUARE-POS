@@ -47,7 +47,7 @@ const paymentBadge = (method: string) => {
     credit: 'bg-amber-500/15 text-amber-400 border border-amber-500/30',
     split:  'bg-violet-500/15 text-violet-400 border border-violet-500/30',
   }
-  return map[method] ?? 'bg-slate-700 text-slate-300'
+  return map[method] ?? 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
 }
 
 const statusBadge = (s: string) =>
@@ -240,8 +240,8 @@ export default function WholesalePage() {
       {/* Heading */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">Wholesale</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Bulk sales management</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Wholesale</h1>
+          <p className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">Bulk sales management</p>
         </div>
         <button onClick={() => setShowForm(true)}
           className="btn-primary flex items-center gap-2 flex-shrink-0">
@@ -260,10 +260,10 @@ export default function WholesalePage() {
             <DollarSign className="w-5 h-5 text-primary-400" />
           </div>
           <div className="min-w-0">
-            <p className="text-lg font-bold text-white font-mono truncate">
+            <p className="text-lg font-bold text-slate-900 dark:text-white font-mono truncate">
               {formatCurrency(totalRevenue)}
             </p>
-            <p className="text-xs text-slate-400">Month Revenue</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Month Revenue</p>
           </div>
         </div>
 
@@ -277,7 +277,7 @@ export default function WholesalePage() {
               <p className="text-lg font-bold text-emerald-400 font-mono truncate">
                 {formatCurrency(totalProfit)}
               </p>
-              <p className="text-xs text-slate-400">Month Profit</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Month Profit</p>
             </div>
           </div>
         )}
@@ -287,10 +287,10 @@ export default function WholesalePage() {
             <ShoppingBag className="w-5 h-5 text-violet-400" />
           </div>
           <div className="min-w-0">
-            <p className="text-lg font-bold text-white font-mono truncate">
+            <p className="text-lg font-bold text-slate-900 dark:text-white font-mono truncate">
               {thisMonth.length}
             </p>
-            <p className="text-xs text-slate-400">Month Transactions</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Month Transactions</p>
           </div>
         </div>
       </div>
@@ -298,7 +298,7 @@ export default function WholesalePage() {
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 dark:text-slate-400" />
           <input className="input pl-9" placeholder="Search customer or invoice…"
             value={search} onChange={e => setSearch(e.target.value)} />
         </div>
@@ -317,7 +317,7 @@ export default function WholesalePage() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="text-xs text-slate-400 uppercase tracking-wide border-b border-slate-700/40 bg-slate-800/40">
+                <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/40">
                   <th className="text-left px-4 py-3 whitespace-nowrap">Invoice</th>
                   <th className="text-left px-4 py-3 whitespace-nowrap hidden sm:table-cell">Date</th>
                   <th className="text-left px-4 py-3 whitespace-nowrap">Customer</th>
@@ -349,22 +349,22 @@ export default function WholesalePage() {
                   const totalQty = items.reduce((s, i) => s + i.quantity, 0)
                   return (
                     <tr key={sale.id}
-                      className="border-b border-slate-700/30 hover:bg-slate-700/20 transition-colors">
+                      className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
                       <td className="px-4 py-3 font-mono text-xs text-primary-400 whitespace-nowrap">
                         {sale.sale_number}
                       </td>
-                      <td className="px-4 py-3 text-xs text-slate-400 whitespace-nowrap hidden sm:table-cell">
+                      <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap hidden sm:table-cell">
                         {formatDate(sale.created_at)}
                       </td>
                       <td className="px-4 py-3">
-                        <p className="text-sm font-medium text-slate-200 truncate max-w-[120px] sm:max-w-[180px]">
+                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate max-w-[120px] sm:max-w-[180px]">
                           {sale.customer_name || 'Walk-in Customer'}
                         </p>
                         {sale.customer_phone && (
                           <p className="text-xs text-slate-500 truncate">{sale.customer_phone}</p>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-300 hidden sm:table-cell">
+                      <td className="px-4 py-3 text-right font-mono text-sm text-slate-700 dark:text-slate-300 hidden sm:table-cell">
                         {totalQty}
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
@@ -380,7 +380,7 @@ export default function WholesalePage() {
                           {formatCurrency(profit)}
                         </td>
                       )}
-                      <td className="px-4 py-3 text-right font-bold font-mono text-white whitespace-nowrap text-sm break-all">
+                      <td className="px-4 py-3 text-right font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap text-sm break-all">
                         {formatCurrency(sale.total)}
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
@@ -454,11 +454,11 @@ export default function WholesalePage() {
 
           {/* Cart items */}
           {cartItems.length > 0 && (
-            <div className="rounded-xl border border-slate-700 overflow-hidden">
+            <div className="rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-xs text-slate-400 uppercase bg-slate-800/60 border-b border-slate-700">
+                    <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
                       <th className="text-left px-3 py-2">Product</th>
                       <th className="text-right px-3 py-2">Qty</th>
                       <th className="text-right px-3 py-2">Unit Price</th>
@@ -468,8 +468,8 @@ export default function WholesalePage() {
                   </thead>
                   <tbody>
                     {cartItems.map(item => (
-                      <tr key={item.product_id} className="border-b border-slate-700/40">
-                        <td className="px-3 py-2 text-slate-200 max-w-[120px] truncate">
+                      <tr key={item.product_id} className="border-b border-slate-200 dark:border-slate-700/40">
+                        <td className="px-3 py-2 text-slate-800 dark:text-slate-200 max-w-[120px] truncate">
                           {item.product_name}
                         </td>
                         <td className="px-3 py-2">
@@ -482,7 +482,7 @@ export default function WholesalePage() {
                             value={item.unit_price}
                             onChange={e => updateCartItem(item.product_id, 'unit_price', Number(e.target.value))} />
                         </td>
-                        <td className="px-3 py-2 text-right font-mono text-white whitespace-nowrap">
+                        <td className="px-3 py-2 text-right font-mono text-slate-900 dark:text-white whitespace-nowrap">
                           {formatCurrency(item.unit_price * item.quantity)}
                         </td>
                         <td className="px-3 py-2">
@@ -528,8 +528,8 @@ export default function WholesalePage() {
           </div>
 
           {/* Total summary */}
-          <div className="bg-slate-800/60 rounded-xl p-4 space-y-2 text-sm">
-            <div className="flex justify-between text-slate-400">
+          <div className="bg-slate-100 dark:bg-slate-800/60 rounded-xl p-4 space-y-2 text-sm">
+            <div className="flex justify-between text-slate-600 dark:text-slate-400">
               <span>Subtotal</span>
               <span className="font-mono">{formatCurrency(cartSubtotal)}</span>
             </div>
@@ -539,7 +539,7 @@ export default function WholesalePage() {
                 <span className="font-mono">−{formatCurrency(form.discount_amount)}</span>
               </div>
             )}
-            <div className="flex justify-between text-white font-bold text-base pt-2 border-t border-slate-700">
+            <div className="flex justify-between text-slate-900 dark:text-white font-bold text-base pt-2 border-t border-slate-200 dark:border-slate-700">
               <span>Total</span>
               <span className="font-mono text-primary-400">{formatCurrency(cartTotal)}</span>
             </div>
@@ -563,16 +563,16 @@ export default function WholesalePage() {
           title={`${viewSale.sale_number} — ${viewSale.customer_name}`} size="lg">
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3 text-sm">
-              <div className="bg-slate-800/50 rounded-xl p-3">
-                <p className="text-xs text-slate-400 mb-0.5">Customer</p>
-                <p className="font-medium text-slate-200">{viewSale.customer_name}</p>
+              <div className="bg-slate-100 dark:bg-slate-800/50 rounded-xl p-3">
+                <p className="text-xs text-slate-600 dark:text-slate-400 mb-0.5">Customer</p>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{viewSale.customer_name}</p>
                 {viewSale.customer_phone && (
                   <p className="text-xs text-slate-500 mt-0.5">{viewSale.customer_phone}</p>
                 )}
               </div>
-              <div className="bg-slate-800/50 rounded-xl p-3">
-                <p className="text-xs text-slate-400 mb-0.5">Date</p>
-                <p className="font-medium text-slate-200">{formatDate(viewSale.created_at)}</p>
+              <div className="bg-slate-100 dark:bg-slate-800/50 rounded-xl p-3">
+                <p className="text-xs text-slate-600 dark:text-slate-400 mb-0.5">Date</p>
+                <p className="font-medium text-slate-800 dark:text-slate-200">{formatDate(viewSale.created_at)}</p>
                 <p className="text-xs text-slate-500 capitalize mt-0.5">
                   Payment: {viewSale.payment_method}
                 </p>
@@ -580,10 +580,10 @@ export default function WholesalePage() {
             </div>
 
             {/* Items table */}
-            <div className="overflow-x-auto rounded-xl border border-slate-700">
+            <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-xs text-slate-400 uppercase bg-slate-800/60 border-b border-slate-700">
+                  <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase bg-slate-100 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
                     <th className="text-left px-3 py-2">Product</th>
                     <th className="text-right px-3 py-2">Qty</th>
                     {/* Cost price — admin only */}
@@ -598,20 +598,20 @@ export default function WholesalePage() {
                   {(viewSale.items || []).map((item, i) => {
                     const itemProfit = (item.unit_price - (item.cost_price ?? 0)) * item.quantity
                     return (
-                      <tr key={i} className="border-b border-slate-700/40">
-                        <td className="px-3 py-2 text-slate-200 max-w-[140px] truncate">
+                      <tr key={i} className="border-b border-slate-200 dark:border-slate-700/40">
+                        <td className="px-3 py-2 text-slate-800 dark:text-slate-200 max-w-[140px] truncate">
                           {item.product_name}
                         </td>
-                        <td className="px-3 py-2 text-right font-mono text-slate-300">
+                        <td className="px-3 py-2 text-right font-mono text-slate-700 dark:text-slate-300">
                           {item.quantity}
                         </td>
                         {/* Cost — admin only */}
                         {isAdmin && (
-                          <td className="px-3 py-2 text-right font-mono text-slate-400 whitespace-nowrap">
+                          <td className="px-3 py-2 text-right font-mono text-slate-600 dark:text-slate-400 whitespace-nowrap">
                             {formatCurrency(item.cost_price)}
                           </td>
                         )}
-                        <td className="px-3 py-2 text-right font-mono text-white whitespace-nowrap">
+                        <td className="px-3 py-2 text-right font-mono text-slate-900 dark:text-white whitespace-nowrap">
                           {formatCurrency(item.unit_price)}
                         </td>
                         {/* Profit — admin only */}
@@ -622,7 +622,7 @@ export default function WholesalePage() {
                             {formatCurrency(itemProfit)}
                           </td>
                         )}
-                        <td className="px-3 py-2 text-right font-bold font-mono text-white whitespace-nowrap">
+                        <td className="px-3 py-2 text-right font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">
                           {formatCurrency(item.unit_price * item.quantity)}
                         </td>
                       </tr>
@@ -633,8 +633,8 @@ export default function WholesalePage() {
             </div>
 
             {/* Sale totals */}
-            <div className="bg-slate-800/50 rounded-xl p-4 space-y-2 text-sm">
-              <div className="flex justify-between text-slate-400">
+            <div className="bg-slate-100 dark:bg-slate-800/50 rounded-xl p-4 space-y-2 text-sm">
+              <div className="flex justify-between text-slate-600 dark:text-slate-400">
                 <span>Subtotal</span>
                 <span className="font-mono">{formatCurrency(viewSale.subtotal)}</span>
               </div>
@@ -644,7 +644,7 @@ export default function WholesalePage() {
                   <span className="font-mono">−{formatCurrency(viewSale.discount_amount)}</span>
                 </div>
               )}
-              <div className="flex justify-between font-bold text-white text-base pt-2 border-t border-slate-700">
+              <div className="flex justify-between font-bold text-slate-900 dark:text-white text-base pt-2 border-t border-slate-200 dark:border-slate-700">
                 <span>Total</span>
                 <span className="font-mono text-primary-400">{formatCurrency(viewSale.total)}</span>
               </div>
@@ -665,7 +665,7 @@ export default function WholesalePage() {
             </div>
 
             {viewSale.notes && (
-              <div className="bg-slate-800/30 rounded-xl px-4 py-3 text-sm text-slate-400">
+              <div className="bg-slate-100 dark:bg-slate-800/30 rounded-xl px-4 py-3 text-sm text-slate-600 dark:text-slate-400">
                 <span className="text-slate-500 text-xs uppercase tracking-wide">Notes: </span>
                 {viewSale.notes}
               </div>

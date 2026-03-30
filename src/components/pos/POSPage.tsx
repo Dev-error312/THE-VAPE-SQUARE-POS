@@ -39,10 +39,10 @@ export default function POSPage() {
   return (
     <div className="flex h-full relative">
       {/* ── Product Grid (always visible) ─────────────────────────────── */}
-      <div className="flex-1 bg-slate-950 border-r border-slate-800 overflow-hidden flex flex-col min-w-0">
-        <div className="px-4 py-3 border-b border-slate-800">
-          <h1 className="text-lg font-bold text-white">Point of Sale</h1>
-          <p className="text-xs text-slate-400">Select products to add to cart</p>
+      <div className="flex-1 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-w-0">
+        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800">
+          <h1 className="text-lg font-bold text-slate-900 dark:text-white">Point of Sale</h1>
+          <p className="text-xs text-slate-600 dark:text-slate-400">Select products to add to cart</p>
         </div>
         <div className="flex-1 overflow-hidden">
           <ProductGrid products={products} loading={loading} />
@@ -50,18 +50,18 @@ export default function POSPage() {
       </div>
 
       {/* ── Desktop Cart Panel (lg+) ───────────────────────────────────── */}
-      <div className="hidden lg:flex w-80 xl:w-96 bg-slate-900 flex-col flex-shrink-0">
+      <div className="hidden lg:flex w-80 xl:w-96 bg-white dark:bg-slate-900 flex-col flex-shrink-0">
         <CartPanel onCheckout={() => setShowCheckout(true)} />
       </div>
 
       {/* ── Mobile Cart Overlay (< lg) ────────────────────────────────── */}
       {showMobileCart && (
-        <div className="fixed inset-0 z-50 flex flex-col bg-slate-900 lg:hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 flex-shrink-0">
-            <h2 className="font-bold text-white text-base">Your Cart</h2>
+        <div className="fixed inset-0 z-50 flex flex-col bg-white dark:bg-slate-900 lg:hidden">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
+            <h2 className="font-bold text-slate-900 dark:text-white text-base">Your Cart</h2>
             <button
               onClick={() => setShowMobileCart(false)}
-              className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-700"
+              className="text-slate-600 dark:text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700"
             >
               <X className="w-5 h-5" />
             </button>
