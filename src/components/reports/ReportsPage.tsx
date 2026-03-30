@@ -39,8 +39,8 @@ export default function ReportsPage() {
     new Date().getFullYear(), new Date().getMonth(), 1,
   ).toISOString().slice(0, 10)
 
-  // ── date range ──────────────────────────────────────────────────────────
-  const [startDate, setStartDate] = useState(monthStart)
+  // ── date range — defaults to Today on first load ─────────────────────
+  const [startDate, setStartDate] = useState(today)
   const [endDate,   setEndDate]   = useState(today)
 
   // ── active tab ──────────────────────────────────────────────────────────
@@ -233,7 +233,7 @@ export default function ReportsPage() {
   // PRESETS
   // ─────────────────────────────────────────────────────────────────────────
   const PRESETS = [
-    { label: 'Today',      start: today,      end: today },
+    { label: 'Today',      start: today, end: today },
     {
       label: 'This Week',
       start: new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10),
