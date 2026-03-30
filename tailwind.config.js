@@ -1,14 +1,19 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
+    './index.html',
+    './src/**/*.{js,ts,jsx,tsx}',
   ],
+
+  // 'class' strategy: Tailwind applies dark: variants when <html> has class="dark"
+  // This is controlled by our useTheme hook + the anti-flicker script in index.html
+  darkMode: 'class',
+
   theme: {
     extend: {
       colors: {
         primary: {
-          50: '#f0f9ff',
+          50:  '#f0f9ff',
           100: '#e0f2fe',
           200: '#bae6fd',
           300: '#7dd3fc',
@@ -18,17 +23,17 @@ export default {
           700: '#0369a1',
           800: '#075985',
           900: '#0c4a6e',
+          950: '#082f49',
         },
-        slate: {
-          850: '#1a2234',
-          950: '#0a0f1e',
-        }
       },
       fontFamily: {
-        sans: ['DM Sans', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'monospace'],
+        mono: ['JetBrains Mono', 'Fira Code', 'Consolas', 'monospace'],
+      },
+      animation: {
+        'spin-slow': 'spin 2s linear infinite',
       },
     },
   },
+
   plugins: [],
 }

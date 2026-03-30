@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import Footer from './Footer'
+import ThemeToggle from './ThemeToggle'
 import { useAuthStore } from '../../store/authStore'
 import { useIsAdmin } from '../../hooks/useRole'
 import toast from 'react-hot-toast'
@@ -83,7 +84,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="px-3 py-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 px-3 py-2 mb-1">
+          <div className="flex items-center gap-3 px-3 py-2 mb-2">
             <div className="w-8 h-8 bg-primary-700 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-xs font-bold text-primary-200">
                 {user?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -95,6 +96,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {user?.role === 'admin' ? 'Admin' : 'Cashier'}
               </div>
             </div>
+          </div>
+          {/* Theme toggle */}
+          <div className="px-1 mb-1.5">
+            <ThemeToggle />
           </div>
           <button onClick={handleSignOut}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
