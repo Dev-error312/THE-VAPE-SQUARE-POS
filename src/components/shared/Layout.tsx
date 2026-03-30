@@ -53,7 +53,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <ShoppingBag className="w-4 h-4 text-white" />
           </div>
           <div>
-            <div className="font-bold text-slate-900 dark:text-slate-900 dark:text-white text-sm">The Vape Square</div>
+            <div className="font-bold text-slate-900 dark:text-white text-sm">The Vape Square</div>
             <div className="text-xs text-slate-500">Nepal</div>
           </div>
           <button className="ml-auto lg:hidden text-slate-600 dark:text-slate-400 hover:text-white" onClick={() => setSidebarOpen(false)}>
@@ -117,7 +117,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             <div className="w-7 h-7 bg-primary-600 rounded-lg flex items-center justify-center">
               <ShoppingBag className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-bold text-slate-900 dark:text-slate-900 dark:text-white text-sm">The Vape Square</span>
+            <span className="font-bold text-slate-900 dark:text-white text-sm">The Vape Square</span>
           </div>
         </header>
         <main className="flex-1 overflow-auto">{children}</main>
