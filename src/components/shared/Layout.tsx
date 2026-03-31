@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom'
+import { NavLink, useNavigate, Link } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, Package, BarChart3,
   LogOut, ShoppingBag, Menu, X, ChevronRight,
@@ -15,10 +15,10 @@ const ALL_NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard',     adminOnly: false },
   { to: '/pos',       icon: ShoppingCart,    label: 'Point of Sale', adminOnly: false },
   { to: '/inventory', icon: Package,          label: 'Inventory',    adminOnly: false },
-  { to: '/reports',   icon: BarChart3,        label: 'Reports',      adminOnly: false },
-  { to: '/analytics', icon: TrendingUp,       label: 'Analytics',    adminOnly: true  },
   { to: '/wholesale', icon: Store,            label: 'Wholesale',    adminOnly: false },
-  { to: '/expenses',  icon: DollarSign,       label: 'Expenses',     adminOnly: false },
+  { to: '/reports',   icon: BarChart3,        label: 'Reports',      adminOnly: true  },
+  { to: '/analytics', icon: TrendingUp,       label: 'Analytics',    adminOnly: true  },
+  { to: '/expenses',  icon: DollarSign,       label: 'Expenses',     adminOnly: true  },
   { to: '/credits',   icon: CreditCard,       label: 'Credits',      adminOnly: true  },
 ]
 
@@ -84,7 +84,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         <div className="px-3 py-4 border-t border-slate-200 dark:border-slate-800">
-          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+          <Link to="/profile" className="flex items-center gap-3 px-3 py-2 mb-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
             <div className="w-8 h-8 bg-primary-700 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-xs font-bold text-primary-200">
                 {user?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -96,7 +96,7 @@ export default function Layout({ children }: { children: React.ReactNode }) {
                 {user?.role === 'admin' ? 'Admin' : 'Cashier'}
               </div>
             </div>
-          </div>
+          </Link>
           {/* Theme toggle */}
           <div className="px-1 mb-1.5">
             <ThemeToggle />

@@ -12,7 +12,7 @@ interface AuthState {
   initialize: () => Promise<void>
 }
 
-async function getOrCreateUser(authUser: {
+async function getOrCreateUserProfile(authUser: {
   id: string
   email?: string
   user_metadata?: Record<string, string>
@@ -21,38 +21,46 @@ async function getOrCreateUser(authUser: {
 
   const fallback: User = {
     id: authUser.id,
+    auth_user_id: authUser.id,
     email: authUser.email ?? '',
     full_name: authUser.user_metadata?.full_name ?? '',
+    name: authUser.user_metadata?.full_name ?? '',
     role: 'cashier',
+    business_id: '00000000-0000-0000-0000-000000000001',
+    business_name: 'The Vape Square',
     created_at: authUser.created_at,
   }
 
   try {
-    // 🔍 Check if user already exists
-    const { data: existingUser } = await supabase
-      .from('users')
+    // 🔍 Check if user profile already exists
+    const { data: existingProfile } = await supabase
+      .from('user_profiles')
       .select('*')
-      .eq('id', authUser.id)
+      .eq('auth_user_id', authUser.id)
       .single()
 
-    // 🆕 If NOT exists → create with default role
-    if (!existingUser) {
-      await supabase.from('users').insert({
-        id: authUser.id,
-        email: authUser.email ?? '',
-        full_name: authUser.user_metadata?.full_name ?? '',
-        role: 'cashier',
-      })
+    // 📦 If profile exists, fetch with business info
+    if (existingProfile) {
+      const { data: businessData } = await supabase
+        .from('businesses')
+        .select('*')
+        .eq('id', existingProfile.business_id)
+        .single()
+
+      return {
+        id: existingProfile.id,
+        auth_user_id: existingProfile.auth_user_id,
+        email: existingProfile.email,
+        full_name: existingProfile.name,
+        name: existingProfile.name,
+        role: existingProfile.role,
+        business_id: existingProfile.business_id,
+        business_name: businessData?.name,
+        created_at: existingProfile.created_at,
+      }
     }
 
-    // 📦 Always fetch latest user data
-    const { data } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', authUser.id)
-      .single()
-
-    return (data as User) ?? fallback
+    return fallback
 
   } catch {
     return fallback
@@ -66,7 +74,7 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   initialize: async () => {
     try {
-      // Directly check for session — most reliable method
+      // Directly check for session
       const { data: { session }, error } = await supabase.auth.getSession()
 
       if (error || !session) {
@@ -75,7 +83,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       // Session exists — get/create user profile
-      const user = await getOrCreateUser(session.user)
+      const user = await getOrCreateUserProfile(session.user)
       set({ session, user, loading: false })
     } catch {
       set({ user: null, session: null, loading: false })
@@ -88,7 +96,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (error) return { error: error.message }
       if (!data.session || !data.user) return { error: 'Login failed. Please try again.' }
 
-      const user = await getOrCreateUser(data.user)
+      const user = await getOrCreateUserProfile(data.user)
       set({ session: data.session, user, loading: false })
       return { error: null }
     } catch (e: unknown) {

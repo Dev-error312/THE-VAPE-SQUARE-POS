@@ -1,17 +1,32 @@
 import { supabase } from './supabase'
+import { useAuthStore } from '../store/authStore'
 import type { Product, InventoryBatch, Category, Supplier } from '../types'
 
 function round2(n: number) { return Math.round(n * 100) / 100 }
 
+function getBusinessId(): string {
+  const store = useAuthStore.getState()
+  if (!store.user?.business_id) throw new Error('Not authenticated — no business_id')
+  return store.user.business_id
+}
+
 // ─── Suppliers ─────────────────────────────────────────────────────────────
 export const suppliersApi = {
   async getAll(): Promise<Supplier[]> {
-    const { data, error } = await supabase.from('suppliers').select('*').order('name')
+    const businessId = getBusinessId()
+    const { data, error } = await supabase.from('suppliers')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('name')
     if (error) throw new Error(`Suppliers fetch failed: ${error.message}`)
     return data || []
   },
   async create(supplier: { name: string; phone?: string; address?: string }): Promise<Supplier> {
-    const { data, error } = await supabase.from('suppliers').insert(supplier).select().single()
+    const businessId = getBusinessId()
+    const { data, error } = await supabase.from('suppliers').insert({
+      ...supplier,
+      business_id: businessId,
+    }).select().single()
     if (error) throw new Error(`Failed to create supplier: ${error.message}`)
     return data
   },
@@ -26,18 +41,20 @@ export const suppliersApi = {
   },
 
   async findOrCreate(name: string): Promise<Supplier> {
+    const businessId = getBusinessId()
     const trimmed = name.trim()
     if (!trimmed) throw new Error('Supplier name cannot be empty')
     const { data: existing } = await supabase
       .from('suppliers')
       .select('id, name, phone, address, created_at')
       .ilike('name', trimmed)
+      .eq('business_id', businessId)
       .limit(1)
       .single()
     if (existing) return existing as Supplier
     const { data, error } = await supabase
       .from('suppliers')
-      .insert({ name: trimmed })
+      .insert({ name: trimmed, business_id: businessId })
       .select('id, name, phone, address, created_at')
       .single()
     if (error) throw new Error(`Failed to create supplier: ${error.message}`)
@@ -48,7 +65,11 @@ export const suppliersApi = {
 // ─── Categories ────────────────────────────────────────────────────────────
 export const categoriesApi = {
   async getAll(): Promise<Category[]> {
-    const { data, error } = await supabase.from('categories').select('*').order('name')
+    const businessId = getBusinessId()
+    const { data, error } = await supabase.from('categories')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('name')
     if (error) throw new Error(`Categories fetch failed: ${error.message}`)
     const cats = data || []
     const OTHERS = ['others', 'other', 'अन्य']
@@ -57,9 +78,13 @@ export const categoriesApi = {
     return [...main, ...others]
   },
   async create(name: string): Promise<Category> {
+    const businessId = getBusinessId()
     const trimmed = name.trim()
     if (!trimmed) throw new Error('Category name cannot be empty')
-    const { data, error } = await supabase.from('categories').insert({ name: trimmed }).select().single()
+    const { data, error } = await supabase.from('categories').insert({
+      name: trimmed,
+      business_id: businessId,
+    }).select().single()
     if (error) throw new Error(`Failed to create category: ${error.message}`)
     return data
   },
@@ -72,6 +97,7 @@ export const categoriesApi = {
 // ─── Products ──────────────────────────────────────────────────────────────
 export const productsApi = {
   async getAll(): Promise<Product[]> {
+    const businessId = getBusinessId()
     const { data, error } = await supabase
       .from('products')
       .select(`
@@ -81,6 +107,7 @@ export const productsApi = {
         suppliers ( id, name ),
         inventory_batches ( quantity_remaining, cost_price )
       `)
+      .eq('business_id', businessId)
       .eq('is_active', true)
       .order('name')
 
@@ -121,7 +148,11 @@ export const productsApi = {
     description?: string
     is_active: boolean
   }): Promise<Product> {
-    const { data, error } = await supabase.from('products').insert(product).select().single()
+    const businessId = getBusinessId()
+    const { data, error } = await supabase.from('products').insert({
+      ...product,
+      business_id: businessId,
+    }).select().single()
     if (error) throw new Error(`Failed to create product: ${error.message}`)
     return data
   },
@@ -171,6 +202,7 @@ export const batchesApi = {
     supplier_id?: string | null
     notes?: string
     received_at: string
+    business_id: string
   }): Promise<InventoryBatch> {
     const { data, error } = await supabase.from('inventory_batches').insert(batch).select().single()
     if (error) throw new Error(`Failed to create batch: ${error.message}`)

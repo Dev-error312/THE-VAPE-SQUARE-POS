@@ -6,7 +6,7 @@ import { productsApi } from '../../lib/productsApi'
 import type { Product } from '../../types'
 import {
   Plus, Search, RefreshCw, Eye, Trash2, Store,
-  DollarSign, ShoppingBag, TrendingUp, Package, X,
+  DollarSign, ShoppingBag, TrendingUp, Package, X, Calendar,
 } from 'lucide-react'
 import LoadingSpinner from '../shared/LoadingSpinner'
 import ConfirmDialog from '../shared/ConfirmDialog'
@@ -59,10 +59,16 @@ const statusBadge = (s: string) =>
 export default function WholesalePage() {
   const isAdmin = useIsAdmin()
 
+  const today = new Date().toISOString().slice(0, 10)
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
+
   const [sales,    setSales]    = useState<WholesaleSale[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [loading,  setLoading]  = useState(true)
   const [search,   setSearch]   = useState('')
+  const [startDate, setStartDate] = useState(today)
+  const [endDate, setEndDate] = useState(today)
+  const [selectedPreset, setSelectedPreset] = useState<string>('Today')
 
   const [showForm,    setShowForm]    = useState(false)
   const [viewSale,    setViewSale]    = useState<WholesaleSale | null>(null)
@@ -85,13 +91,33 @@ export default function WholesalePage() {
   const [selectedProductId, setSelectedProductId] = useState('')
 
   // ── Load ──────────────────────────────────────────────────────────────
+  const getPresets = () => {
+    const now = new Date()
+    const todayStr = now.toISOString().slice(0, 10)
+    const monthStartStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+    const monthEndStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+    const weekStart = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)
+    return [
+      { label: 'Today',      start: todayStr, end: todayStr },
+      { label: 'This Week',  start: weekStart, end: todayStr },
+      { label: 'This Month', start: monthStartStr, end: monthEndStr },
+    ]
+  }
+
   const load = useCallback(async () => {
     setLoading(true)
     try {
+      const startDateTime = new Date(startDate)
+      startDateTime.setHours(0, 0, 0, 0)
+      const endDateTime = new Date(endDate)
+      endDateTime.setHours(23, 59, 59, 999)
+
       const [salesRes, prodsRes] = await Promise.all([
         supabase
           .from('wholesale_sales')
           .select('*')
+          .gte('created_at', startDateTime.toISOString())
+          .lte('created_at', endDateTime.toISOString())
           .order('created_at', { ascending: false }),
         productsApi.getAll(),
       ])
@@ -100,31 +126,35 @@ export default function WholesalePage() {
         (salesRes.data || []).map((sale: any) => ({
           ...sale,
           items: Array.isArray(sale.items) ? sale.items : [],
-      }))
-)
+        }))
+      )
       setProducts(prodsRes)
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Failed to load wholesale data')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [startDate, endDate])
 
   useEffect(() => { load() }, [load])
 
-  // ── Derived stats ─────────────────────────────────────────────────────
-  const thisMonth = useMemo(() => {
-    const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0)
-    return sales.filter(s => new Date(s.created_at) >= start && s.status === 'completed')
-  }, [sales])
+  // ── Date-filtered sales ─────────────────────────────────────────────────
+  const filteredByDate = useMemo(() => {
+    const start = new Date(startDate); start.setHours(0, 0, 0, 0)
+    const end = new Date(endDate); end.setHours(23, 59, 59, 999)
+    return sales.filter(s => {
+      const saleDate = new Date(s.created_at)
+      return saleDate >= start && saleDate <= end && s.status === 'completed'
+    })
+  }, [sales, startDate, endDate])
 
-  const totalRevenue = useMemo(() => thisMonth.reduce((s, r) => s + r.total, 0), [thisMonth])
+  const totalRevenue = useMemo(() => filteredByDate.reduce((s, r) => s + r.total, 0), [filteredByDate])
   const totalProfit  = useMemo(() =>
-    thisMonth.reduce((sum, sale) =>
+    filteredByDate.reduce((sum, sale) =>
       sum + (sale.items || []).reduce(
         (p, item) => p + (item.unit_price - (item.cost_price ?? 0)) * item.quantity, 0,
       ), 0,
-    ), [thisMonth])
+    ), [filteredByDate])
 
   // ── Search ────────────────────────────────────────────────────────────
   const filtered = useMemo(() => {
@@ -263,7 +293,7 @@ export default function WholesalePage() {
             <p className="text-lg font-bold text-slate-900 dark:text-white font-mono truncate">
               {formatCurrency(totalRevenue)}
             </p>
-            <p className="text-xs text-slate-600 dark:text-slate-400">Month Revenue</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Period Revenue</p>
           </div>
         </div>
 
@@ -277,7 +307,7 @@ export default function WholesalePage() {
               <p className="text-lg font-bold text-emerald-400 font-mono truncate">
                 {formatCurrency(totalProfit)}
               </p>
-              <p className="text-xs text-slate-600 dark:text-slate-400">Month Profit</p>
+              <p className="text-xs text-slate-600 dark:text-slate-400">Period Profit</p>
             </div>
           </div>
         )}
@@ -288,10 +318,50 @@ export default function WholesalePage() {
           </div>
           <div className="min-w-0">
             <p className="text-lg font-bold text-slate-900 dark:text-white font-mono truncate">
-              {thisMonth.length}
+              {filteredByDate.length}
             </p>
-            <p className="text-xs text-slate-600 dark:text-slate-400">Month Transactions</p>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Period Transactions</p>
           </div>
+        </div>
+      </div>
+
+      {/* Date range + action bar */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="label flex items-center gap-1">
+            <Calendar className="w-3 h-3" /> From
+          </label>
+          <input type="date" className="input" value={startDate}
+            onChange={e => { setStartDate(e.target.value); setSelectedPreset('') }} />
+        </div>
+        <div>
+          <label className="label">To</label>
+          <input type="date" className="input" value={endDate}
+            onChange={e => { setEndDate(e.target.value); setSelectedPreset('') }} />
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          {getPresets().map(p => {
+            const isActive = selectedPreset === p.label
+            return (
+              <button
+                key={p.label}
+                onClick={() => { setStartDate(p.start); setEndDate(p.end); setSelectedPreset(p.label) }}
+                className={`text-xs px-3 py-2 rounded-lg font-medium transition-all ${
+                  isActive
+                    ? 'bg-primary-600 text-white border border-primary-600 shadow-md'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                {p.label}
+              </button>
+            )
+          })}
+          <button
+            onClick={load}
+            className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-2"
+          >
+            <RefreshCw className="w-3 h-3" /> Refresh
+          </button>
         </div>
       </div>
 

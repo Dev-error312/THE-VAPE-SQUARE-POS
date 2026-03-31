@@ -1,9 +1,20 @@
 import { supabase } from './supabase'
+import { useAuthStore } from '../store/authStore'
 import type { Expense, DamagedProduct } from '../types'
+
+function getBusinessId(): string {
+  const store = useAuthStore.getState()
+  if (!store.user?.business_id) throw new Error('Not authenticated — no business_id')
+  return store.user.business_id
+}
 
 export const expensesApi = {
   async getAll(startDate?: string, endDate?: string): Promise<Expense[]> {
-    let query = supabase.from('expenses').select('*').order('expense_date', { ascending: false })
+    const businessId = getBusinessId()
+    let query = supabase.from('expenses')
+      .select('*')
+      .eq('business_id', businessId)
+      .order('expense_date', { ascending: false })
     if (startDate) query = query.gte('expense_date', startDate)
     if (endDate) query = query.lte('expense_date', endDate)
     const { data, error } = await query
@@ -12,7 +23,11 @@ export const expensesApi = {
   },
 
   async create(expense: { title: string; amount: number; expense_date: string; notes?: string; created_by?: string }): Promise<Expense> {
-    const { data, error } = await supabase.from('expenses').insert(expense).select().single()
+    const businessId = getBusinessId()
+    const { data, error } = await supabase.from('expenses').insert({
+      ...expense,
+      business_id: businessId,
+    }).select().single()
     if (error) throw new Error(`Failed to create expense: ${error.message}`)
     return data
   },
@@ -29,8 +44,13 @@ export const expensesApi = {
   },
 
   async getTotalForDateRange(startDate: string, endDate: string): Promise<number> {
+    const businessId = getBusinessId()
     const { data, error } = await supabase
-      .from('expenses').select('amount').gte('expense_date', startDate).lte('expense_date', endDate)
+      .from('expenses')
+      .select('amount')
+      .eq('business_id', businessId)
+      .gte('expense_date', startDate)
+      .lte('expense_date', endDate)
     if (error) return 0
     return (data || []).reduce((s, e) => s + e.amount, 0)
   },

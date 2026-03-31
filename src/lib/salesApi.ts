@@ -1,6 +1,13 @@
 import { supabase } from './supabase'
+import { useAuthStore } from '../store/authStore'
 import type { Sale, CartItem, PaymentMethod } from '../types'
 import { round2 } from '../utils'
+
+function getBusinessId(): string {
+  const store = useAuthStore.getState()
+  if (!store.user?.business_id) throw new Error('Not authenticated — no business_id')
+  return store.user.business_id
+}
 
 function generateSaleNumber(): string {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
@@ -25,6 +32,7 @@ export const salesApi = {
     userId: string
     saleDate?: string   // optional backdated datetime (ISO string)
   }): Promise<Sale> {
+    const businessId = getBusinessId()
     if (!params.items || params.items.length === 0) throw new Error('Cart is empty')
 
     const saleNumber = generateSaleNumber()
@@ -33,6 +41,7 @@ export const salesApi = {
       .from('sales')
       .insert({
         sale_number: saleNumber,
+        business_id: businessId,
         subtotal: params.subtotal,
         discount_type: params.discountType,
         discount_value: params.discountValue,
@@ -60,12 +69,10 @@ export const salesApi = {
       sale_id: string; product_id: string; batch_id: string | null
       product_name: string; quantity: number
       cost_price: number; unit_price: number; discount_amount: number; line_total: number
+      business_id: string
     }[] = []
 
     // Distribute the cart-level discount proportionally across items.
-    // This is CRITICAL for correct per-item profit calculation.
-    // e.g. Cart total before discount = 3000, discount = 200 (6.67%)
-    //      Item line_total becomes 2800, profit = 2800 - cost = correct.
     const grossSubtotal = params.items.reduce(
       (s, item) => s + item.unit_price * item.quantity, 0
     )
@@ -80,6 +87,7 @@ export const salesApi = {
         .from('inventory_batches')
         .select('id, quantity_remaining, cost_price')
         .eq('product_id', cartItem.product.id)
+        .eq('business_id', businessId)
         .gt('quantity_remaining', 0)
         .order('received_at', { ascending: true })
 
@@ -104,7 +112,6 @@ export const salesApi = {
       // Proportional discount for this item
       const itemGross = cartItem.unit_price * cartItem.quantity
       const itemDiscount = round2(itemGross * cartDiscountRatio)
-      // line_total = actual selling price received for this item
       const lineTotal = round2(itemGross - itemDiscount)
 
       saleItemsToInsert.push({
@@ -115,20 +122,21 @@ export const salesApi = {
         quantity: cartItem.quantity,
         cost_price: resolvedCostPrice,
         unit_price: cartItem.unit_price,
-        discount_amount: itemDiscount,   // proportional share of cart discount
-        line_total: lineTotal,           // actual revenue = unit_price*qty - discount
+        discount_amount: itemDiscount,
+        line_total: lineTotal,
+        business_id: businessId,
       })
     }
 
     const { error: itemsError } = await supabase.from('sale_items').insert(saleItemsToInsert)
     if (itemsError) throw new Error(`Failed to save sale items: ${itemsError.message}`)
 
-    const paymentsToInsert: { sale_id: string; method: 'cash' | 'online'; amount: number }[] = []
-    if (params.paymentMethod === 'cash') paymentsToInsert.push({ sale_id: sale.id, method: 'cash', amount: params.cashAmount })
-    else if (params.paymentMethod === 'online') paymentsToInsert.push({ sale_id: sale.id, method: 'online', amount: params.onlineAmount })
+    const paymentsToInsert: { sale_id: string; method: 'cash' | 'online'; amount: number; business_id: string }[] = []
+    if (params.paymentMethod === 'cash') paymentsToInsert.push({ sale_id: sale.id, method: 'cash', amount: params.cashAmount, business_id: businessId })
+    else if (params.paymentMethod === 'online') paymentsToInsert.push({ sale_id: sale.id, method: 'online', amount: params.onlineAmount, business_id: businessId })
     else if (params.paymentMethod === 'split') {
-      if (params.cashAmount > 0) paymentsToInsert.push({ sale_id: sale.id, method: 'cash', amount: params.cashAmount })
-      if (params.onlineAmount > 0) paymentsToInsert.push({ sale_id: sale.id, method: 'online', amount: params.onlineAmount })
+      if (params.cashAmount > 0) paymentsToInsert.push({ sale_id: sale.id, method: 'cash', amount: params.cashAmount, business_id: businessId })
+      if (params.onlineAmount > 0) paymentsToInsert.push({ sale_id: sale.id, method: 'online', amount: params.onlineAmount, business_id: businessId })
     }
     if (paymentsToInsert.length > 0) {
       const { error: paymentError } = await supabase.from('payments').insert(paymentsToInsert)
@@ -139,11 +147,6 @@ export const salesApi = {
   },
 
   // ─── Delete a sale: atomic server-side RPC ─────────────────────────────
-  // Uses a Postgres SECURITY DEFINER function that:
-  //   1. Restores inventory_batches.quantity_remaining for each sale item
-  //      (exact batch if batch_id exists, latest batch as fallback)
-  //   2. Deletes payments, sale_items, then sales — in that order
-  // This bypasses client-side RLS issues and is fully atomic.
   async deleteSale(saleId: string): Promise<void> {
     const { error } = await supabase.rpc('delete_sale_and_restore_stock', {
       p_sale_id: saleId,

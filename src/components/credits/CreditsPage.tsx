@@ -27,11 +27,13 @@ export default function CreditsPage() {
   const monthStartStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
   const [filterStart, setFilterStart] = useState('')
   const [filterEnd,   setFilterEnd]   = useState('')
+  const [selectedPreset, setSelectedPreset] = useState<string>('')
 
+  const monthEndStr = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10)
   const DATE_PRESETS = [
     { label: 'Today',      start: todayStr, end: todayStr },
     { label: 'This Week',  start: new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10), end: todayStr },
-    { label: 'This Month', start: monthStartStr, end: todayStr },
+    { label: 'This Month', start: monthStartStr, end: monthEndStr },
   ]
 
   const load = useCallback(async () => {
@@ -210,11 +212,11 @@ export default function CreditsPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="label flex items-center gap-1"><Calendar className="w-3 h-3" /> From</label>
-            <input type="date" className="input" value={filterStart} onChange={e => setFilterStart(e.target.value)} />
+            <input type="date" className="input" value={filterStart} onChange={e => { setFilterStart(e.target.value); setSelectedPreset('') }} />
           </div>
           <div>
             <label className="label">To</label>
-            <input type="date" className="input" value={filterEnd} onChange={e => setFilterEnd(e.target.value)} />
+            <input type="date" className="input" value={filterEnd} onChange={e => { setFilterEnd(e.target.value); setSelectedPreset('') }} />
           </div>
           <div>
             <label className="label">Supplier</label>
@@ -230,16 +232,16 @@ export default function CreditsPage() {
         <div className="flex flex-wrap gap-2 items-center">
           {DATE_PRESETS.map(p => (
             <button key={p.label}
-              onClick={() => { setFilterStart(p.start); setFilterEnd(p.end) }}
+              onClick={() => { setFilterStart(p.start); setFilterEnd(p.end); setSelectedPreset(p.label) }}
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                filterStart === p.start && filterEnd === p.end
+                selectedPreset === p.label
                   ? 'bg-primary-600 text-white'
                   : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}>
               {p.label}
             </button>
           ))}
-          <button onClick={() => { setFilterStart(''); setFilterEnd('') }}
+          <button onClick={() => { setFilterStart(''); setFilterEnd(''); setSelectedPreset('') }}
             className="text-xs px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
             All Time
           </button>

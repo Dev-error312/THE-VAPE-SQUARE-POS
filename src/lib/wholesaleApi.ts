@@ -1,11 +1,20 @@
 import { supabase } from './supabase'
+import { useAuthStore } from '../store/authStore'
 import type { WholesaleSale } from '../types'
+
+function getBusinessId(): string {
+  const store = useAuthStore.getState()
+  if (!store.user?.business_id) throw new Error('Not authenticated — no business_id')
+  return store.user.business_id
+}
 
 export const wholesaleApi = {
   async getAll(startDate?: string, endDate?: string): Promise<WholesaleSale[]> {
+    const businessId = getBusinessId()
     let query = supabase
       .from('wholesale_sales')
       .select('*')
+      .eq('business_id', businessId)
       .order('sale_date', { ascending: false })
     if (startDate) query = query.gte('sale_date', startDate)
     if (endDate)   query = query.lte('sale_date', endDate)
@@ -15,7 +24,7 @@ export const wholesaleApi = {
   },
 
   async create(sale: {
-    product_id: string | null
+    product_id?: string | null
     product_name: string
     quantity: number
     cost_price: number
@@ -24,13 +33,21 @@ export const wholesaleApi = {
     notes?: string
     sale_date: string
     created_by?: string
+    customer_name?: string
+    customer_phone?: string | null
+    items?: any
+    payment_method?: string
+    total?: number
   }): Promise<WholesaleSale> {
-    // Validate
-    if (sale.quantity <= 0) throw new Error('Quantity must be greater than 0')
+    const businessId = getBusinessId()
+    if (sale.quantity <= 0 && !sale.items) throw new Error('Quantity must be greater than 0')
     if (sale.selling_price < 0) throw new Error('Selling price cannot be negative')
     if (sale.cost_price < 0) throw new Error('Cost price cannot be negative')
     const { data, error } = await supabase
-      .from('wholesale_sales').insert(sale).select().single()
+      .from('wholesale_sales').insert({
+        ...sale,
+        business_id: businessId,
+      }).select().single()
     if (error) throw new Error(`Failed to create wholesale sale: ${error.message}`)
     return data
   },
@@ -43,9 +60,11 @@ export const wholesaleApi = {
   async getSummary(startDate: string, endDate: string): Promise<{
     total_revenue: number; total_profit: number; total_sales: number
   }> {
+    const businessId = getBusinessId()
     const { data, error } = await supabase
       .from('wholesale_sales')
       .select('total_amount, profit')
+      .eq('business_id', businessId)
       .gte('sale_date', startDate)
       .lte('sale_date', endDate)
     if (error) return { total_revenue: 0, total_profit: 0, total_sales: 0 }

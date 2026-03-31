@@ -1,4 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
+import { supabase } from '../../lib/supabase'
+import { useBusinessId } from '../../hooks/useRole'
 import { salesApi } from '../../lib/salesApi'
 import { purchasesApi } from '../../lib/productsApi'
 import type { RestockRecord } from '../../lib/productsApi'
@@ -42,6 +44,7 @@ export default function ReportsPage() {
   // ── date range — defaults to Today on first load ─────────────────────
   const [startDate, setStartDate] = useState(today)
   const [endDate,   setEndDate]   = useState(today)
+  const [selectedPreset, setSelectedPreset] = useState<string>('Today')
 
   // ── active tab ──────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<ReportTab>('sales')
@@ -61,6 +64,7 @@ export default function ReportsPage() {
   const [restocksLoading, setRestocksLoading] = useState(false)
 
   // ── globals ─────────────────────────────────────────────────────────────
+  const businessId = useBusinessId()
   const triggerSales = useRefreshStore(s => s.triggerSales)
   const salesVersion = useRefreshStore(s => s.salesVersion)
   const isAdmin      = useIsAdmin()
@@ -107,8 +111,11 @@ export default function ReportsPage() {
 
   // Reload whichever tab is active whenever dates change or sales mutate globally
   useEffect(() => {
-    if (activeTab === 'sales') loadSales()
-    else                       loadRestocks()
+    if (activeTab === 'sales') {
+      loadSales()
+    } else if (activeTab === 'restocks') {
+      loadRestocks()
+    }
   // loadSales / loadRestocks already include date deps; salesVersion forces a refresh
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadSales, loadRestocks, salesVersion, activeTab])
@@ -232,15 +239,19 @@ export default function ReportsPage() {
   // ─────────────────────────────────────────────────────────────────────────
   // PRESETS
   // ─────────────────────────────────────────────────────────────────────────
-  const PRESETS = [
-    { label: 'Today',      start: today, end: today },
-    {
-      label: 'This Week',
-      start: new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10),
-      end:   today,
-    },
-    { label: 'This Month', start: monthStart, end: today },
-  ]
+  const getPresets = () => {
+    const now = new Date()
+    const todayStr = now.toISOString().slice(0, 10)
+    const monthStartStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+    const monthEndStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+    const weekStart = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)
+    return [
+      { label: 'Today',      start: todayStr, end: todayStr },
+      { label: 'This Week',  start: weekStart, end: todayStr },
+      { label: 'This Month', start: monthStartStr, end: monthEndStr },
+    ]
+  }
+  const PRESETS = getPresets()
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
@@ -286,28 +297,38 @@ export default function ReportsPage() {
             <Calendar className="w-3 h-3" /> From
           </label>
           <input type="date" className="input" value={startDate}
-            onChange={e => setStartDate(e.target.value)} />
+            onChange={e => { setStartDate(e.target.value); setSelectedPreset('') }} />
         </div>
         <div>
           <label className="label">To</label>
           <input type="date" className="input" value={endDate}
-            onChange={e => setEndDate(e.target.value)} />
+            onChange={e => { setEndDate(e.target.value); setSelectedPreset('') }} />
         </div>
         <div className="flex flex-wrap gap-2 items-center">
-          {PRESETS.map(p => (
-            <button
-              key={p.label}
-              onClick={() => { setStartDate(p.start); setEndDate(p.end) }}
-              className={`btn-secondary text-xs px-3 py-2 ${
-                startDate === p.start && endDate === p.end
-                  ? 'bg-primary-700 text-white border-primary-600' : ''
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
+          {PRESETS.map(p => {
+            const isActive = selectedPreset === p.label
+            return (
+              <button
+                key={p.label}
+                onClick={() => { setStartDate(p.start); setEndDate(p.end); setSelectedPreset(p.label) }}
+                className={`text-xs px-3 py-2 rounded-lg font-medium transition-all ${
+                  isActive
+                    ? 'bg-primary-600 text-white border border-primary-600 shadow-md'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                {p.label}
+              </button>
+            )
+          })}
           <button
-            onClick={() => activeTab === 'sales' ? loadSales() : loadRestocks()}
+            onClick={() => {
+              if (activeTab === 'sales') {
+                loadSales()
+              } else if (activeTab === 'restocks') {
+                loadRestocks()
+              }
+            }}
             className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-2"
           >
             <RefreshCw className="w-3 h-3" /> Refresh
@@ -392,11 +413,9 @@ export default function ReportsPage() {
                 ))}
             </div>
 
-            {/* ── Summary row 2: Cash collected | Online collected ─────────
-                Always visible (both cashiers and admins need to know the split).
-                Split payments: cash_amount + online_amount are stored separately
-                so the sum naturally handles all payment methods correctly.      */}
-            <div className="grid grid-cols-2 gap-3">
+            {/* ── Summary row 2: Cash | Online | Opening Stock | Closing Stock ─── */}
+            <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+              {/* Cash Collected */}
               <div className="card p-4 flex items-center gap-3">
                 <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
                   <Banknote className="w-5 h-5 text-emerald-400" />
@@ -409,6 +428,7 @@ export default function ReportsPage() {
                   <p className="text-xs text-slate-500 hidden sm:block">Includes split cash portions</p>
                 </div>
               </div>
+              {/* Online Collected */}
               <div className="card p-4 flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
                   <Wifi className="w-5 h-5 text-blue-400" />

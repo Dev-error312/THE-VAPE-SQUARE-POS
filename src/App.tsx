@@ -14,6 +14,7 @@ import AnalyticsPage from './components/analytics/AnalyticsPage'
 import ExpensesPage from './components/expenses/ExpensesPage'
 import CreditsPage from './components/credits/CreditsPage'
 import WholesalePage from './components/wholesale/WholesalePage'
+import ProfilePage from './components/profile/ProfilePage'
 
 export default function App() {
   const initialize = useAuthStore(s => s.initialize)
@@ -47,6 +48,7 @@ export default function App() {
         <Route path="/inventory" element={wrap(<InventoryPage />)} />
         <Route path="/reports"   element={wrap(<ReportsPage />)} />
         <Route path="/wholesale" element={wrap(<WholesalePage />)} />
+        <Route path="/profile"   element={wrap(<ProfilePage />)} />
         <Route path="/expenses"  element={wrap(<ExpensesPage />)} />
         {/* Admin-only routes — cashiers are redirected to /dashboard */}
         <Route path="/analytics" element={adminWrap(<AnalyticsPage />)} />

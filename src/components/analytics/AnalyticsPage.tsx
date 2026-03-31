@@ -43,6 +43,7 @@ export default function AnalyticsPage() {
 
   const [startDate, setStartDate] = useState(monthStartStr)
   const [endDate, setEndDate] = useState(todayStr)
+  const [selectedPreset, setSelectedPreset] = useState<string>('This Month')
   const [rows, setRows] = useState<DayRow[]>([])
   const [paymentTotals, setPaymentTotals] = useState<PaymentTotals>({ cash: 0, online: 0 })
   const [wholesale, setWholesale] = useState<WholesaleSummary>({ total_revenue: 0, total_profit: 0, total_sales: 0 })
@@ -59,11 +60,11 @@ export default function AnalyticsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salesVersion])
 
+  const monthEndStr = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10)
   const PRESETS = [
     { label: 'Today',      start: todayStr, end: todayStr },
     { label: 'This Week',  start: new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10), end: todayStr },
-    { label: 'This Month', start: monthStartStr, end: todayStr },
-    { label: 'Last Month', start: new Date(new Date().getFullYear(), new Date().getMonth() - 1, 1).toISOString().slice(0, 10), end: new Date(new Date().getFullYear(), new Date().getMonth(), 0).toISOString().slice(0, 10) },
+    { label: 'This Month', start: monthStartStr, end: monthEndStr },
   ]
 
   const load = useCallback(async () => {
@@ -194,11 +195,11 @@ export default function AnalyticsPage() {
         <div className="flex flex-wrap items-end gap-3">
           <div>
             <label className="label flex items-center gap-1"><Calendar className="w-3 h-3" /> From</label>
-            <input type="date" className="input" value={startDate} onChange={e => setStartDate(e.target.value)} />
+            <input type="date" className="input" value={startDate} onChange={e => { setStartDate(e.target.value); setSelectedPreset('') }} />
           </div>
           <div>
             <label className="label">To</label>
-            <input type="date" className="input" value={endDate} onChange={e => setEndDate(e.target.value)} />
+            <input type="date" className="input" value={endDate} onChange={e => { setEndDate(e.target.value); setSelectedPreset('') }} />
           </div>
           <button onClick={load} disabled={loading} className="btn-primary flex items-center gap-2">
             {loading
@@ -211,9 +212,9 @@ export default function AnalyticsPage() {
         <div className="flex flex-wrap gap-2">
           {PRESETS.map(p => (
             <button key={p.label}
-              onClick={() => { setStartDate(p.start); setEndDate(p.end) }}
+              onClick={() => { setStartDate(p.start); setEndDate(p.end); setSelectedPreset(p.label) }}
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
-                startDate === p.start && endDate === p.end
+                selectedPreset === p.label
                   ? 'bg-primary-600 text-white'
                   : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
               }`}>
