@@ -139,7 +139,7 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 block mb-2 flex items-center gap-1">
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1 mb-2">
               <Mail size={14} /> Email
             </label>
             <input
