@@ -6,6 +6,7 @@ import type { Product, Category } from '../../types'
 import { Plus } from 'lucide-react'
 import { generateBatchNumber } from '../../utils'
 import toast from 'react-hot-toast'
+import { useAuthStore } from '../../store/authStore'
 
 interface ProductFormProps {
   isOpen: boolean
@@ -19,6 +20,7 @@ const OTHERS = ['others', 'other', 'अन्य']
 
 export default function ProductForm({ isOpen, onClose, product, onSaved }: ProductFormProps) {
   const isEdit = !!product
+  const { user } = useAuthStore()
 
   const [form, setForm] = useState({
     name: '', brand: '', category_id: '', supplier_name: '',
@@ -118,6 +120,7 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
                 product_id: product.id, batch_number: generateBatchNumber(),
                 quantity_received: diff, quantity_remaining: diff,
                 cost_price: product.avg_cost || 0, received_at: new Date().toISOString(),
+                business_id: user?.business_id || '',
               })
             } else {
               // Decrease: deduct from newest batch(es) first

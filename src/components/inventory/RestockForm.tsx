@@ -93,6 +93,7 @@ export default function RestockForm({ isOpen, onClose, product, onRestocked }: R
         supplier_id:        product.supplier_id || null,
         notes:              form.notes.trim() || undefined,
         received_at:        new Date(form.received_at).toISOString(),
+        business_id:        user?.business_id || '',
       })
 
       // 3. Record purchase
