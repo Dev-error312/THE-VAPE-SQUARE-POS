@@ -59,7 +59,7 @@ export default function AuthPage() {
             <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
               <ShoppingCart className="w-5 h-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-slate-900 dark:text-white">The Vape Square</span>
+            <span className="text-xl font-bold text-slate-900 dark:text-white">KaroBar</span>
           </div>
           <h1 className="text-4xl font-bold text-slate-900 dark:text-white leading-tight mb-6">
             Complete Point of Sale
@@ -91,7 +91,7 @@ export default function AuthPage() {
             <div className="w-9 h-9 bg-primary-500 rounded-xl flex items-center justify-center">
               <ShoppingCart className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-slate-900 dark:text-white">The Vape Square</span>
+            <span className="text-lg font-bold text-slate-900 dark:text-white">KaroBar</span>
           </div>
 
           <div className="mb-8">

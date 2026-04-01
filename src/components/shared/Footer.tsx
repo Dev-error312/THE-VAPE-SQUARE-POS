@@ -1,5 +1,5 @@
 const APP_VERSION = 'v1.0.0'
-const COMPANY    = 'The Vape Square'
+const COMPANY    = 'KaroBar'
 const BRAND      = 'Suyog Adhikari'
 const YEAR       = new Date().getFullYear()
 

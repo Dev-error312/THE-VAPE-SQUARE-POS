@@ -19,7 +19,18 @@ import ProfilePage from './components/profile/ProfilePage'
 
 export default function App() {
   const initialize = useAuthStore(s => s.initialize)
+  const user = useAuthStore(s => s.user)
+  
   useEffect(() => { initialize() }, [initialize])
+
+  // Update document title with business name
+  useEffect(() => {
+    if (user?.business_name) {
+      document.title = `Karobar - ${user.business_name}`
+    } else {
+      document.title = 'Karobar'
+    }
+  }, [user?.business_name])
 
   /** Standard protected route — any authenticated user */
   const wrap = (child: React.ReactNode) => (
