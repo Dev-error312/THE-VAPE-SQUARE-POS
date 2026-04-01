@@ -2,7 +2,7 @@ import { NavLink, useNavigate, Link } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, Package, BarChart3,
   LogOut, ShoppingBag, Menu, X, ChevronRight,
-  TrendingUp, DollarSign, CreditCard, Store
+  TrendingUp, DollarSign, CreditCard, Store, Users
 } from 'lucide-react'
 import { useState } from 'react'
 import Footer from './Footer'
@@ -18,6 +18,7 @@ const ALL_NAV = [
   { to: '/wholesale', icon: Store,            label: 'Wholesale',    adminOnly: false },
   { to: '/reports',   icon: BarChart3,        label: 'Reports',      adminOnly: true  },
   { to: '/analytics', icon: TrendingUp,       label: 'Analytics',    adminOnly: true  },
+  { to: '/employees', icon: Users,            label: 'Employees',    adminOnly: true  },
   { to: '/expenses',  icon: DollarSign,       label: 'Expenses',     adminOnly: true  },
   { to: '/credits',   icon: CreditCard,       label: 'Credits',      adminOnly: true  },
 ]

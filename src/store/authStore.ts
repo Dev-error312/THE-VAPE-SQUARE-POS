@@ -35,19 +35,34 @@ async function getOrCreateUserProfile(authUser: {
 
   try {
     // 🔍 Check if user profile already exists
-    const { data: existingProfile } = await supabase
+    const { data: existingProfile, error: profileError } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('auth_user_id', authUser.id)
       .single()
 
+    // Handle query errors explicitly
+    if (profileError) {
+      console.warn('Profile query error:', profileError)
+      return fallback
+    }
+
     // 📦 If profile exists, fetch with business info
     if (existingProfile) {
-      const { data: businessData } = await supabase
+      const { data: businessData, error: businessError } = await supabase
         .from('businesses')
         .select('*')
         .eq('id', existingProfile.business_id)
         .single()
+
+      if (businessError) {
+        console.warn('Business query error:', businessError, 'business_id:', existingProfile.business_id)
+      }
+
+      // ✅ Double-check role is valid (admin or cashier)
+      const role = (existingProfile.role === 'admin' || existingProfile.role === 'cashier')
+        ? existingProfile.role
+        : 'cashier'
 
       return {
         id: existingProfile.id,
@@ -55,16 +70,17 @@ async function getOrCreateUserProfile(authUser: {
         email: existingProfile.email,
         full_name: existingProfile.name,
         name: existingProfile.name,
-        role: existingProfile.role,
+        role,
         business_id: existingProfile.business_id,
-        business_name: businessData?.name,
+        business_name: businessData?.name ?? `Business (${existingProfile.business_id})`,
         created_at: existingProfile.created_at,
       }
     }
 
     return fallback
 
-  } catch {
+  } catch (error) {
+    console.error('Error in getOrCreateUserProfile:', error)
     return fallback
   }
 }
