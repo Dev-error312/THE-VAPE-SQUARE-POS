@@ -4,6 +4,7 @@ import { useEffect } from 'react'
 import { useAuthStore } from './store/authStore'
 
 import AuthPage from './components/auth/AuthPage'
+import RegisterBusinessPage from './components/auth/RegisterBusinessPage'
 import Layout from './components/shared/Layout'
 import ProtectedRoute from './components/shared/ProtectedRoute'
 import DashboardPage from './components/dashboard/DashboardPage'
@@ -42,6 +43,7 @@ export default function App() {
       />
       <Routes>
         <Route path="/login"     element={<AuthPage />} />
+        <Route path="/register"  element={<RegisterBusinessPage />} />
         <Route path="/"          element={wrap(<Navigate to="/dashboard" replace />)} />
         <Route path="/dashboard" element={wrap(<DashboardPage />)} />
         <Route path="/pos"       element={wrap(<POSPage />)} />

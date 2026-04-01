@@ -114,7 +114,7 @@ export default function ExpensesPage() {
         await expensesApi.update(editExpense.id, { title, amount, expense_date: expForm.expense_date, notes: expForm.notes || undefined })
         toast.success('Expense updated')
       } else {
-        await expensesApi.create({ title, amount, expense_date: expForm.expense_date, notes: expForm.notes || undefined, created_by: user?.id })
+        await expensesApi.create({ title, amount, expense_date: expForm.expense_date, notes: expForm.notes || undefined, created_by: user?.auth_user_id })
         toast.success('Expense added')
       }
       setShowExpForm(false)
@@ -144,7 +144,7 @@ export default function ExpensesPage() {
       await damagedApi.create({
         product_id: dmgForm.product_id || null,
         product_name: name, quantity: qty, cost_price: cost,
-        damage_date: dmgForm.damage_date, notes: dmgForm.notes || undefined, created_by: user?.id,
+        damage_date: dmgForm.damage_date, notes: dmgForm.notes || undefined, created_by: user?.auth_user_id,
       })
       toast.success('Damage recorded')
       setShowDmgForm(false)
@@ -190,7 +190,7 @@ export default function ExpensesPage() {
       await testerApi.create({
         product_id: testerForm.product_id, product_name: name, quantity: qty,
         cost_price: cost, tester_date: testerForm.tester_date,
-        notes: testerForm.notes || undefined, created_by: user?.id,
+        notes: testerForm.notes || undefined, created_by: user?.auth_user_id,
       })
       toast.success(`Tester recorded — ${qty} units deducted from stock`)
       setShowTesterForm(false)

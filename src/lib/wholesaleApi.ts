@@ -53,7 +53,8 @@ export const wholesaleApi = {
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('wholesale_sales').delete().eq('id', id)
+    const businessId = getBusinessId()
+    const { error } = await supabase.from('wholesale_sales').delete().eq('id', id).eq('business_id', businessId)
     if (error) throw new Error(`Failed to delete wholesale sale: ${error.message}`)
   },
 

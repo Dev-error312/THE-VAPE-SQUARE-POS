@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useIsAdmin } from '../../hooks/useRole'
+import { useAuthStore } from '../../store/authStore'
 import { formatCurrency, formatDate } from '../../utils'
 import { productsApi } from '../../lib/productsApi'
 import type { Product } from '../../types'
@@ -107,6 +108,9 @@ export default function WholesalePage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
+      const user = useAuthStore.getState().user
+      if (!user?.business_id) throw new Error('Not authenticated — no business_id')
+      
       const startDateTime = new Date(startDate)
       startDateTime.setHours(0, 0, 0, 0)
       const endDateTime = new Date(endDate)
@@ -116,6 +120,7 @@ export default function WholesalePage() {
         supabase
           .from('wholesale_sales')
           .select('*')
+          .eq('business_id', user.business_id)
           .gte('created_at', startDateTime.toISOString())
           .lte('created_at', endDateTime.toISOString())
           .order('created_at', { ascending: false }),
@@ -210,6 +215,9 @@ export default function WholesalePage() {
 
     setSaving(true)
     try {
+      const user = useAuthStore.getState().user
+      if (!user?.business_id) throw new Error('Not authenticated')
+
       const saleNumber = `WS-${Date.now()}`
       const payload = {
         sale_number:    saleNumber,
@@ -232,6 +240,8 @@ export default function WholesalePage() {
         payment_method:  form.payment_method,
         status:          'completed',
         notes:           form.notes.trim() || null,
+        business_id:     user.business_id,
+        created_by:      user.auth_user_id,
       }
       const { error } = await supabase.from('wholesale_sales').insert(payload)
       if (error) throw error
@@ -252,8 +262,10 @@ export default function WholesalePage() {
     if (!deleteTarget) return
     setDeleting(true)
     try {
+      const user = useAuthStore.getState().user
+      const businessId = user?.business_id
       const { error } = await supabase
-        .from('wholesale_sales').delete().eq('id', deleteTarget.id)
+        .from('wholesale_sales').delete().eq('id', deleteTarget.id).eq('business_id', businessId)
       if (error) throw error
       toast.success('Sale deleted')
       setDeleteTarget(null)

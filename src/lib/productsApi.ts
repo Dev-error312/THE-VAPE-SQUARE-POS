@@ -31,12 +31,14 @@ export const suppliersApi = {
     return data
   },
   async update(id: string, updates: { name?: string; phone?: string; address?: string }): Promise<Supplier> {
-    const { data, error } = await supabase.from('suppliers').update(updates).eq('id', id).select().single()
+    const businessId = getBusinessId()
+    const { data, error } = await supabase.from('suppliers').update(updates).eq('id', id).eq('business_id', businessId).select().single()
     if (error) throw new Error(`Failed to update supplier: ${error.message}`)
     return data
   },
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('suppliers').delete().eq('id', id)
+    const businessId = getBusinessId()
+    const { error } = await supabase.from('suppliers').delete().eq('id', id).eq('business_id', businessId)
     if (error) throw new Error(`Failed to delete supplier: ${error.message}`)
   },
 
@@ -44,14 +46,17 @@ export const suppliersApi = {
     const businessId = getBusinessId()
     const trimmed = name.trim()
     if (!trimmed) throw new Error('Supplier name cannot be empty')
-    const { data: existing } = await supabase
+    const { data: existing, error: checkError } = await supabase
       .from('suppliers')
       .select('id, name, phone, address, created_at')
       .ilike('name', trimmed)
       .eq('business_id', businessId)
       .limit(1)
-      .single()
-    if (existing) return existing as Supplier
+    
+    if (existing && existing.length > 0) {
+      return existing[0] as Supplier
+    }
+    
     const { data, error } = await supabase
       .from('suppliers')
       .insert({ name: trimmed, business_id: businessId })
@@ -88,8 +93,33 @@ export const categoriesApi = {
     if (error) throw new Error(`Failed to create category: ${error.message}`)
     return data
   },
+  async findOrCreate(name: string): Promise<Category> {
+    const businessId = getBusinessId()
+    const trimmed = name.trim()
+    if (!trimmed) throw new Error('Category name cannot be empty')
+    // Check if category already exists (case-insensitive)
+    const { data: existing, error: checkError } = await supabase
+      .from('categories')
+      .select('id, name, business_id, created_at')
+      .ilike('name', trimmed)
+      .eq('business_id', businessId)
+      .limit(1)
+    
+    if (existing && existing.length > 0) {
+      return existing[0] as Category
+    }
+    
+    // Create new category if it doesn't exist
+    const { data, error } = await supabase.from('categories').insert({
+      name: trimmed,
+      business_id: businessId,
+    }).select().single()
+    if (error) throw new Error(`Failed to create category: ${error.message}`)
+    return data as Category
+  },
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('categories').delete().eq('id', id)
+    const businessId = getBusinessId()
+    const { error } = await supabase.from('categories').delete().eq('id', id).eq('business_id', businessId)
     if (error) throw new Error(`Failed to delete category: ${error.message}`)
   },
 }
@@ -166,19 +196,21 @@ export const productsApi = {
     unit?: string
     description?: string
   }): Promise<Product> {
+    const businessId = getBusinessId()
     const { data, error } = await supabase
       .from('products')
       .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', id).select().single()
+      .eq('id', id).eq('business_id', businessId).select().single()
     if (error) throw new Error(`Failed to update product: ${error.message}`)
     return data
   },
 
   async delete(id: string): Promise<void> {
+    const businessId = getBusinessId()
     const { error } = await supabase
       .from('products')
       .update({ is_active: false, updated_at: new Date().toISOString() })
-      .eq('id', id)
+      .eq('id', id).eq('business_id', businessId)
     if (error) throw new Error(`Failed to archive product: ${error.message}`)
   },
 }
@@ -186,8 +218,9 @@ export const productsApi = {
 // ─── Batches ───────────────────────────────────────────────────────────────
 export const batchesApi = {
   async getByProduct(productId: string): Promise<InventoryBatch[]> {
+    const businessId = getBusinessId()
     const { data, error } = await supabase
-      .from('inventory_batches').select('*').eq('product_id', productId)
+      .from('inventory_batches').select('*').eq('product_id', productId).eq('business_id', businessId)
       .order('received_at', { ascending: true })
     if (error) throw new Error(`Batches fetch failed: ${error.message}`)
     return data || []
@@ -232,9 +265,11 @@ export interface RestockRecord {
 // ─── Purchases ─────────────────────────────────────────────────────────────
 export const purchasesApi = {
   async getAll(): Promise<import('../types').Purchase[]> {
+    const businessId = getBusinessId()
     const { data, error } = await supabase
       .from('purchases')
       .select(`*, suppliers(id, name), products(id, name)`)
+      .eq('business_id', businessId)
       .order('created_at', { ascending: false })
     if (error) throw new Error(`Purchases fetch failed: ${error.message}`)
     return (data || []).map(p => ({
@@ -255,8 +290,15 @@ export const purchasesApi = {
     notes?: string
     created_by?: string
   }): Promise<import('../types').Purchase> {
+    const businessId = getBusinessId()
+    const store = useAuthStore.getState()
+    const authUserId = store.user?.auth_user_id
+    if (!authUserId) throw new Error('Not authenticated — no auth_user_id')
+    
     const payload = {
       ...purchase,
+      business_id: businessId,
+      created_by: authUserId,
       original_payment_type: purchase.payment_type,
     }
     const { data, error } = await supabase.from('purchases').insert(payload).select().single()
@@ -265,13 +307,14 @@ export const purchasesApi = {
   },
 
   async recordPayment(id: string, additionalPayment: number): Promise<void> {
+    const businessId = getBusinessId()
     const { data: purchase } = await supabase
-      .from('purchases').select('paid_amount, total_amount').eq('id', id).single()
+      .from('purchases').select('paid_amount, total_amount').eq('id', id).eq('business_id', businessId).single()
     if (!purchase) throw new Error('Purchase not found')
     const newPaid = Math.min(purchase.paid_amount + additionalPayment, purchase.total_amount)
     const newType = newPaid >= purchase.total_amount ? 'full' : 'partial'
     const { error } = await supabase
-      .from('purchases').update({ paid_amount: newPaid, payment_type: newType }).eq('id', id)
+      .from('purchases').update({ paid_amount: newPaid, payment_type: newType }).eq('id', id).eq('business_id', businessId)
     if (error) throw new Error(`Failed to record payment: ${error.message}`)
   },
 
@@ -281,9 +324,11 @@ export const purchasesApi = {
     supplierId?: string
     creditOnly?: boolean
   }): Promise<import('../types').Purchase[]> {
+    const businessId = getBusinessId()
     let query = supabase
       .from('purchases')
       .select(`*, suppliers(id, name), products(id, name)`)
+      .eq('business_id', businessId)
       .order('created_at', { ascending: false })
     if (params.startDate)  query = query.gte('created_at', params.startDate + 'T00:00:00.000Z')
     if (params.endDate)    query = query.lte('created_at', params.endDate + 'T23:59:59.999Z')
@@ -303,6 +348,7 @@ export const purchasesApi = {
     startDate?: string
     endDate?: string
   }): Promise<RestockRecord[]> {
+    const businessId = getBusinessId()
     let query = supabase
       .from('purchases')
       .select(`
@@ -316,6 +362,7 @@ export const purchasesApi = {
         products  ( id, name ),
         inventory_batches ( quantity_received, cost_price, received_at )
       `)
+      .eq('business_id', businessId)
       .order('created_at', { ascending: false })
 
     if (params?.startDate) {

@@ -106,7 +106,7 @@ export default function RestockForm({ isOpen, onClose, product, onRestocked }: R
         paid_amount:  paidAmount,
         payment_type: form.payment_type,
         notes:        form.notes.trim() || undefined,
-        created_by:   user?.id,
+        created_by:   user?.auth_user_id,
       })
 
       toast.success(`Restocked ${qty} ${product.unit} of "${product.name}"`)

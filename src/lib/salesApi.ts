@@ -101,6 +101,7 @@ export const salesApi = {
           .from('inventory_batches')
           .update({ quantity_remaining: batch.quantity_remaining - deduct })
           .eq('id', batch.id)
+          .eq('business_id', businessId)
         if (updateError) throw new Error(`Failed to deduct stock for "${cartItem.product.name}": ${updateError.message}`)
         qtyToDeduct -= deduct
         resolvedCostPrice = batch.cost_price
@@ -148,8 +149,10 @@ export const salesApi = {
 
   // ─── Delete a sale: atomic server-side RPC ─────────────────────────────
   async deleteSale(saleId: string): Promise<void> {
+    const businessId = getBusinessId()
     const { error } = await supabase.rpc('delete_sale_and_restore_stock', {
       p_sale_id: saleId,
+      p_business_id: businessId,
     })
     if (error) {
       console.error('[deleteSale] RPC error:', error)
@@ -158,12 +161,14 @@ export const salesApi = {
   },
 
   async getAll(params?: { startDate?: string; endDate?: string; limit?: number }): Promise<Sale[]> {
+    const businessId = getBusinessId()
     let query = supabase
       .from('sales')
       .select(`id, sale_number, subtotal, discount_type, discount_value, discount_amount,
         tax_rate, tax_amount, total, payment_method, cash_amount, online_amount,
         change_amount, status, created_at, created_by,
         sale_items ( id, product_id, product_name, quantity, cost_price, unit_price, discount_amount, line_total, batch_id )`)
+      .eq('business_id', businessId)
       .order('created_at', { ascending: false })
 
     if (params?.startDate) query = query.gte('created_at', params.startDate)
@@ -176,22 +181,24 @@ export const salesApi = {
   },
 
   async getById(id: string): Promise<Sale | null> {
+    const businessId = getBusinessId()
     const { data, error } = await supabase
-      .from('sales').select(`*, sale_items(*), payments(*)`).eq('id', id).single()
+      .from('sales').select(`*, sale_items(*), payments(*)`).eq('id', id).eq('business_id', businessId).single()
     if (error) throw new Error(`Failed to fetch sale: ${error.message}`)
     return data as Sale
   },
 
   async getDashboardStats() {
+    const businessId = getBusinessId()
     const today = new Date(); today.setHours(0, 0, 0, 0)
     const todayStr = today.toISOString()
     const monthStart = new Date(today.getFullYear(), today.getMonth(), 1).toISOString()
 
     const [todaySalesRes, monthlySalesRes, productsRes] = await Promise.all([
-      supabase.from('sales').select('total, sale_items(quantity, cost_price, unit_price, discount_amount)').eq('status', 'completed').gte('created_at', todayStr),
-      supabase.from('sales').select('total').eq('status', 'completed').gte('created_at', monthStart),
+      supabase.from('sales').select('total, sale_items(quantity, cost_price, unit_price, discount_amount)').eq('status', 'completed').eq('business_id', businessId).gte('created_at', todayStr),
+      supabase.from('sales').select('total').eq('status', 'completed').eq('business_id', businessId).gte('created_at', monthStart),
       // Fetch selling_price + batch cost for stock valuation
-      supabase.from('products').select('id, selling_price, inventory_batches(quantity_remaining, cost_price)').eq('is_active', true),
+      supabase.from('products').select('id, selling_price, inventory_batches(quantity_remaining, cost_price)').eq('is_active', true).eq('business_id', businessId),
     ])
 
     const todaySales = todaySalesRes.data || []
@@ -234,11 +241,12 @@ export const salesApi = {
   },
 
   async getAnalyticsReport(startDate: string, endDate: string) {
+    const businessId = getBusinessId()
     const [salesRes, expensesRes, damagedRes] = await Promise.all([
       supabase.from('sales').select(`created_at, total, sale_items(quantity, cost_price, unit_price, discount_amount, line_total)`)
-        .eq('status', 'completed').gte('created_at', startDate).lte('created_at', endDate).order('created_at'),
-      supabase.from('expenses').select('expense_date, amount').gte('expense_date', startDate.slice(0, 10)).lte('expense_date', endDate.slice(0, 10)),
-      supabase.from('damaged_products').select('damage_date, loss_amount').gte('damage_date', startDate.slice(0, 10)).lte('damage_date', endDate.slice(0, 10)),
+        .eq('status', 'completed').eq('business_id', businessId).gte('created_at', startDate).lte('created_at', endDate).order('created_at'),
+      supabase.from('expenses').select('expense_date, amount').eq('business_id', businessId).gte('expense_date', startDate.slice(0, 10)).lte('expense_date', endDate.slice(0, 10)),
+      supabase.from('damaged_products').select('damage_date, loss_amount').eq('business_id', businessId).gte('damage_date', startDate.slice(0, 10)).lte('damage_date', endDate.slice(0, 10)),
     ])
 
     const grouped: Record<string, { revenue: number; gross_profit: number; sales: number; expenses: number; damages: number }> = {}
@@ -279,10 +287,12 @@ export const salesApi = {
   async getPaymentTotals(startDate: string, endDate: string): Promise<{
     cash: number; online: number
   }> {
+    const businessId = getBusinessId()
     const { data, error } = await supabase
       .from('sales')
       .select('cash_amount, online_amount')
       .eq('status', 'completed')
+      .eq('business_id', businessId)
       .gte('created_at', startDate)
       .lte('created_at', endDate)
     if (error) return { cash: 0, online: 0 }
@@ -294,9 +304,10 @@ export const salesApi = {
   },
 
   async getSalesReport(startDate: string, endDate: string) {
+    const businessId = getBusinessId()
     const { data, error } = await supabase
       .from('sales').select(`created_at, total, sale_items(quantity, cost_price, unit_price, discount_amount, line_total)`)
-      .eq('status', 'completed').gte('created_at', startDate).lte('created_at', endDate).order('created_at')
+      .eq('status', 'completed').eq('business_id', businessId).gte('created_at', startDate).lte('created_at', endDate).order('created_at')
     if (error) throw new Error(`Failed to fetch sales report: ${error.message}`)
 
     const grouped: Record<string, { revenue: number; profit: number; cost: number; sales: number }> = {}

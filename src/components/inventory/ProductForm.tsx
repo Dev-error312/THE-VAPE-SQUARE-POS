@@ -68,7 +68,7 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
     if (!newCategory.trim()) return
     setAddingCat(true)
     try {
-      const cat = await categoriesApi.create(newCategory)
+      const cat = await categoriesApi.findOrCreate(newCategory)
       setCategories(prev => sortCats([...prev, cat]))
       set('category_id', cat.id)
       setNewCategory(''); setShowNewCat(false)
@@ -137,6 +137,7 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
                   .from('inventory_batches')
                   .update({ quantity_remaining: batch.quantity_remaining - deduct })
                   .eq('id', batch.id)
+                  .eq('business_id', user?.business_id || '')
                 toRemove -= deduct
               }
             }

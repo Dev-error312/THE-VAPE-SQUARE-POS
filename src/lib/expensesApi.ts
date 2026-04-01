@@ -33,13 +33,15 @@ export const expensesApi = {
   },
 
   async update(id: string, updates: { title?: string; amount?: number; expense_date?: string; notes?: string }): Promise<Expense> {
-    const { data, error } = await supabase.from('expenses').update(updates).eq('id', id).select().single()
+    const businessId = getBusinessId()
+    const { data, error } = await supabase.from('expenses').update(updates).eq('id', id).eq('business_id', businessId).select().single()
     if (error) throw new Error(`Failed to update expense: ${error.message}`)
     return data
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('expenses').delete().eq('id', id)
+    const businessId = getBusinessId()
+    const { error } = await supabase.from('expenses').delete().eq('id', id).eq('business_id', businessId)
     if (error) throw new Error(`Failed to delete expense: ${error.message}`)
   },
 
@@ -58,7 +60,8 @@ export const expensesApi = {
 
 export const damagedApi = {
   async getAll(startDate?: string, endDate?: string): Promise<DamagedProduct[]> {
-    let query = supabase.from('damaged_products').select('*, products(name)').order('damage_date', { ascending: false })
+    const businessId = getBusinessId()
+    let query = supabase.from('damaged_products').select('*, products(name)').eq('business_id', businessId).order('damage_date', { ascending: false })
     if (startDate) query = query.gte('damage_date', startDate)
     if (endDate) query = query.lte('damage_date', endDate)
     const { data, error } = await query
@@ -75,13 +78,15 @@ export const damagedApi = {
     notes?: string
     created_by?: string
   }): Promise<DamagedProduct> {
-    const { data, error } = await supabase.from('damaged_products').insert(item).select().single()
+    const businessId = getBusinessId()
+    const { data, error } = await supabase.from('damaged_products').insert({ ...item, business_id: businessId }).select().single()
     if (error) throw new Error(`Failed to record damaged product: ${error.message}`)
     return data
   },
 
   async delete(id: string): Promise<void> {
-    const { error } = await supabase.from('damaged_products').delete().eq('id', id)
+    const businessId = getBusinessId()
+    const { error } = await supabase.from('damaged_products').delete().eq('id', id).eq('business_id', businessId)
     if (error) throw new Error(`Failed to delete record: ${error.message}`)
   },
 }
@@ -101,6 +106,7 @@ export const testerApi = {
     notes?: string
     created_by?: string
   }): Promise<{ expense_id: string }> {
+    const businessId = getBusinessId()
     const { supabase } = await import('./supabase')
 
     // 1. Verify stock is sufficient
@@ -108,6 +114,7 @@ export const testerApi = {
       .from('inventory_batches')
       .select('id, quantity_remaining')
       .eq('product_id', params.product_id)
+      .eq('business_id', businessId)
       .gt('quantity_remaining', 0)
       .order('received_at', { ascending: false })  // newest first
 
@@ -137,6 +144,7 @@ export const testerApi = {
         title:        `Tester: ${params.product_name} ×${params.quantity}`,
         amount:       expenseAmount,
         expense_date: params.tester_date,
+        business_id:  businessId,
         notes:        params.notes
           ? `[TESTER] ${params.notes}`
           : `[TESTER] Internal use — cost at रु ${params.cost_price}/unit`,

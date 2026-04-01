@@ -10,6 +10,7 @@ interface AuthState {
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   initialize: () => Promise<void>
+  fetchProfile: (authUserId: string) => Promise<void>
 }
 
 async function getOrCreateUserProfile(authUser: {
@@ -121,5 +122,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     await supabase.auth.signOut()
     set({ user: null, session: null, loading: false })
+  },
+
+  fetchProfile: async (authUserId: string) => {
+    try {
+      const user = await getOrCreateUserProfile({
+        id: authUserId,
+        email: '',
+        user_metadata: {},
+        created_at: new Date().toISOString(),
+      })
+      set({ user, loading: false })
+    } catch (error) {
+      console.error('Failed to fetch profile:', error)
+      set({ loading: false })
+    }
   },
 }))

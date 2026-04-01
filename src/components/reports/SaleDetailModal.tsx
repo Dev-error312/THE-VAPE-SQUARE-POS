@@ -2,6 +2,7 @@ import Modal from '../shared/Modal'
 import type { Sale } from '../../types'
 import { formatCurrency, formatDateTime } from '../../utils'
 import { useIsAdmin } from '../../hooks/useRole'
+import { useAuthStore } from '../../store/authStore'
 import { Printer } from 'lucide-react'
 import { useRef } from 'react'
 
@@ -14,6 +15,7 @@ interface SaleDetailModalProps {
 export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailModalProps) {
   const invoiceRef = useRef<HTMLDivElement>(null)
   const isAdmin    = useIsAdmin()
+  const { user }   = useAuthStore()
 
   const handlePrint = () => {
     if (!invoiceRef.current) return
@@ -131,7 +133,7 @@ export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailMod
         {/* Printable invoice — always shows only customer-facing info */}
         <div ref={invoiceRef} className="bg-white text-black rounded-xl p-5 font-mono text-xs leading-relaxed">
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontWeight: 'bold', fontSize: 16 }}>The Vape Square</div>
+            <div style={{ fontWeight: 'bold', fontSize: 16 }}>{user?.business_name || 'The Vape Square'}</div>
             <div style={{ fontSize: 11 }}>Point of Sale System</div>
             <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
           </div>

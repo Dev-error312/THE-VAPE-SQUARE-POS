@@ -97,7 +97,7 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
         cashAmount:   paymentMethod === 'online' ? 0 : cashAmount,
         onlineAmount: paymentMethod === 'cash'   ? 0 : onlineAmount,
         changeAmount: change,
-        userId: user.id,
+        userId: user.auth_user_id,
         saleDate: saleDateISO,
       })
 
@@ -351,7 +351,7 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
 
           <div ref={invoiceRef} className="bg-white text-black rounded-xl p-5 font-mono text-xs leading-relaxed">
             <div style={{ textAlign: 'center', marginBottom: 8 }}>
-              <div style={{ fontWeight: 'bold', fontSize: 16 }}>The Vape Square</div>
+              <div style={{ fontWeight: 'bold', fontSize: 16 }}>{user?.business_name || 'The Vape Square'}</div>
               <div style={{ fontSize: 11 }}>Point of Sale System</div>
               <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
             </div>
