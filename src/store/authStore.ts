@@ -9,6 +9,7 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  clearUser: () => void
   initialize: () => Promise<void>
   fetchProfile: (authUserId: string) => Promise<void>
 }
@@ -121,6 +122,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signOut: async () => {
     await supabase.auth.signOut()
+    set({ user: null, session: null, loading: false })
+  },
+
+  clearUser: () => {
+    // Force clear user without calling signOut (for token expiration scenarios)
     set({ user: null, session: null, loading: false })
   },
 

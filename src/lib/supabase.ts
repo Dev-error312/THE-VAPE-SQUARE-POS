@@ -24,3 +24,42 @@ export const supabase = createClient(
     },
   }
 )
+
+// ─── Auth State Change Listener ─────────────────────────────────────────────
+// Handle token refresh failures and session expiration
+supabase.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_OUT') {
+    // User explicitly signed out
+    console.log('✋ User signed out')
+    try {
+      const { useAuthStore } = await import('../store/authStore')
+      useAuthStore.getState().clearUser?.()
+    } catch {
+      // clearUser might not exist yet
+    }
+  }
+
+  if (event === 'TOKEN_REFRESHED' && !session) {
+    // Token refresh failed — session is dead
+    console.error('❌ Token refresh failed — session expired')
+    try {
+      const { useAuthStore } = await import('../store/authStore')
+      const authStore = useAuthStore.getState()
+      authStore.clearUser?.()
+      window.location.href = '/auth'
+    } catch {
+      window.location.href = '/auth'
+    }
+  }
+})
+
+// ─── Error Detection Helper ────────────────────────────────────────────────
+export function isRefreshTokenExpired(error: unknown): boolean {
+  if (!error) return false
+  const err = error as { message?: string; status?: number }
+  return (
+    err.message?.includes?.('Refresh Token Not Found') ||
+    err.message?.includes?.('invalid_grant') ||
+    err.status === 400
+  )
+}

@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, isRefreshTokenExpired } from './supabase'
 import { useAuthStore } from '../store/authStore'
 import type { WholesaleSale } from '../types'
 
@@ -6,6 +6,17 @@ function getBusinessId(): string {
   const store = useAuthStore.getState()
   if (!store.user?.business_id) throw new Error('Not authenticated — no business_id')
   return store.user.business_id
+}
+
+// ─── Error Handler for Refresh Token Failures ──────────────────────────────
+async function handleRefreshTokenError(error: unknown): Promise<never> {
+  if (isRefreshTokenExpired(error)) {
+    console.error('❌ Refresh token expired — redirecting to login')
+    useAuthStore.getState().clearUser()
+    await supabase.auth.signOut().catch(() => {})
+    window.location.href = '/auth'
+  }
+  throw error
 }
 
 export const wholesaleApi = {
@@ -19,7 +30,10 @@ export const wholesaleApi = {
     if (startDate) query = query.gte('sale_date', startDate)
     if (endDate)   query = query.lte('sale_date', endDate)
     const { data, error } = await query
-    if (error) throw new Error(`Failed to fetch wholesale sales: ${error.message}`)
+    if (error) {
+      if (isRefreshTokenExpired(error)) await handleRefreshTokenError(error)
+      throw new Error(`Failed to fetch wholesale sales: ${error.message}`)
+    }
     return data || []
   },
 
@@ -48,14 +62,20 @@ export const wholesaleApi = {
         ...sale,
         business_id: businessId,
       }).select().single()
-    if (error) throw new Error(`Failed to create wholesale sale: ${error.message}`)
+    if (error) {
+      if (isRefreshTokenExpired(error)) await handleRefreshTokenError(error)
+      throw new Error(`Failed to create wholesale sale: ${error.message}`)
+    }
     return data
   },
 
   async delete(id: string): Promise<void> {
     const businessId = getBusinessId()
     const { error } = await supabase.from('wholesale_sales').delete().eq('id', id).eq('business_id', businessId)
-    if (error) throw new Error(`Failed to delete wholesale sale: ${error.message}`)
+    if (error) {
+      if (isRefreshTokenExpired(error)) await handleRefreshTokenError(error)
+      throw new Error(`Failed to delete wholesale sale: ${error.message}`)
+    }
   },
 
   async getSummary(startDate: string, endDate: string): Promise<{

@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, isRefreshTokenExpired } from './supabase'
 import { useAuthStore } from '../store/authStore'
 import type { Product, InventoryBatch, Category, Supplier } from '../types'
 
@@ -10,6 +10,17 @@ function getBusinessId(): string {
   return store.user.business_id
 }
 
+// ─── Error Handler for Refresh Token Failures ──────────────────────────────
+async function handleRefreshTokenError(error: unknown): Promise<never> {
+  if (isRefreshTokenExpired(error)) {
+    console.error('❌ Refresh token expired — redirecting to login')
+    useAuthStore.getState().clearUser()
+    await supabase.auth.signOut().catch(() => {})
+    window.location.href = '/auth'
+  }
+  throw error
+}
+
 // ─── Suppliers ─────────────────────────────────────────────────────────────
 export const suppliersApi = {
   async getAll(): Promise<Supplier[]> {
@@ -18,7 +29,10 @@ export const suppliersApi = {
       .select('*')
       .eq('business_id', businessId)
       .order('name')
-    if (error) throw new Error(`Suppliers fetch failed: ${error.message}`)
+    if (error) {
+      if (isRefreshTokenExpired(error)) await handleRefreshTokenError(error)
+      throw new Error(`Suppliers fetch failed: ${error.message}`)
+    }
     return data || []
   },
   async create(supplier: { name: string; phone?: string; address?: string }): Promise<Supplier> {

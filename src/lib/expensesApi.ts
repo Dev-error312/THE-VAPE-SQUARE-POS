@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, isRefreshTokenExpired } from './supabase'
 import { useAuthStore } from '../store/authStore'
 import type { Expense, DamagedProduct } from '../types'
 
@@ -6,6 +6,17 @@ function getBusinessId(): string {
   const store = useAuthStore.getState()
   if (!store.user?.business_id) throw new Error('Not authenticated — no business_id')
   return store.user.business_id
+}
+
+// ─── Error Handler for Refresh Token Failures ──────────────────────────────
+async function handleRefreshTokenError(error: unknown): Promise<never> {
+  if (isRefreshTokenExpired(error)) {
+    console.error('❌ Refresh token expired — redirecting to login')
+    useAuthStore.getState().clearUser()
+    await supabase.auth.signOut().catch(() => {})
+    window.location.href = '/auth'
+  }
+  throw error
 }
 
 export const expensesApi = {
@@ -18,7 +29,10 @@ export const expensesApi = {
     if (startDate) query = query.gte('expense_date', startDate)
     if (endDate) query = query.lte('expense_date', endDate)
     const { data, error } = await query
-    if (error) throw new Error(`Expenses fetch failed: ${error.message}`)
+    if (error) {
+      if (isRefreshTokenExpired(error)) await handleRefreshTokenError(error)
+      throw new Error(`Expenses fetch failed: ${error.message}`)
+    }
     return data || []
   },
 

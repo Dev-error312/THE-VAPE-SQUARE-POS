@@ -1,4 +1,4 @@
-import { supabase } from './supabase'
+import { supabase, isRefreshTokenExpired } from './supabase'
 import { useAuthStore } from '../store/authStore'
 import type { Sale, CartItem, PaymentMethod } from '../types'
 import { round2 } from '../utils'
@@ -13,6 +13,17 @@ function generateSaleNumber(): string {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   const rand = Math.floor(Math.random() * 9000) + 1000
   return `INV-${date}-${rand}`
+}
+
+// ─── Error Handler for Refresh Token Failures ──────────────────────────────
+async function handleRefreshTokenError(error: unknown): Promise<never> {
+  if (isRefreshTokenExpired(error)) {
+    console.error('❌ Refresh token expired — redirecting to login')
+    useAuthStore.getState().clearUser()
+    await supabase.auth.signOut().catch(() => {})
+    window.location.href = '/auth'
+  }
+  throw error
 }
 
 export const salesApi = {
@@ -61,6 +72,7 @@ export const salesApi = {
       .select().single()
 
     if (saleError || !sale) {
+      if (isRefreshTokenExpired(saleError)) await handleRefreshTokenError(saleError)
       console.error('[salesApi] Sale insert error:', saleError)
       throw new Error(`Failed to create sale: ${saleError?.message ?? 'Unknown error'}`)
     }
