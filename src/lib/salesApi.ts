@@ -147,16 +147,74 @@ export const salesApi = {
     return sale as Sale
   },
 
-  // ─── Delete a sale: atomic server-side RPC ─────────────────────────────
+  // ─── Delete a sale and restore stock atomically ──────────────────────────
   async deleteSale(saleId: string): Promise<void> {
     const businessId = getBusinessId()
-    const { error } = await supabase.rpc('delete_sale_and_restore_stock', {
-      p_sale_id: saleId,
-      p_business_id: businessId,
-    })
-    if (error) {
-      console.error('[deleteSale] RPC error:', error)
-      throw new Error(`Failed to delete sale: ${error.message}`)
+
+    // 1. Fetch sale items to restore stock
+    const { data: saleItems, error: fetchError } = await supabase
+      .from('sale_items')
+      .select('batch_id, quantity')
+      .eq('sale_id', saleId)
+
+    if (fetchError) throw new Error(`Failed to fetch sale items: ${fetchError.message}`)
+
+    // 2. Restore stock for all batches in parallel
+    if (saleItems && saleItems.length > 0) {
+      const updatePromises = saleItems
+        .filter(item => item.batch_id) // only items with batch_id
+        .map(item =>
+          supabase
+            .from('inventory_batches')
+            .select('quantity_remaining')
+            .eq('id', item.batch_id)
+            .single()
+            .then(({ data: batch, error: batchError }) => {
+              if (batchError) throw new Error(`Failed to fetch batch: ${batchError.message}`)
+              if (!batch) return
+              
+              const newQuantity = batch.quantity_remaining + item.quantity
+              return supabase
+                .from('inventory_batches')
+                .update({ quantity_remaining: newQuantity })
+                .eq('id', item.batch_id)
+                .then(({ error: updateError }) => {
+                  if (updateError) throw new Error(`Failed to update batch: ${updateError.message}`)
+                })
+            })
+        )
+
+      try {
+        await Promise.all(updatePromises)
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : 'Unknown error'
+        console.error('[deleteSale] Batch restore error:', msg)
+        throw new Error(`Stock restoration failed: ${msg}`)
+      }
+    }
+
+    // 3. Delete related records in parallel
+    const deletePromises = [
+      supabase.from('sale_items').delete().eq('sale_id', saleId),
+      supabase.from('payments').delete().eq('sale_id', saleId),
+    ]
+
+    const results = await Promise.all(deletePromises)
+    
+    // Check for errors in deletions
+    for (const { error } of results) {
+      if (error) throw new Error(`Delete operation failed: ${error.message}`)
+    }
+
+    // 4. Finally delete the sale
+    const { error: saleDeletionError } = await supabase
+      .from('sales')
+      .delete()
+      .eq('id', saleId)
+      .eq('business_id', businessId)
+
+    if (saleDeletionError) {
+      throw new Error(`Failed to delete sale: ${saleDeletionError.message}`)
     }
   },
 

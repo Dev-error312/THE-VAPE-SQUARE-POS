@@ -124,9 +124,11 @@ export default function ReportsPage() {
   // DERIVED — SALES
   // ─────────────────────────────────────────────────────────────────────────
   const filtered = useMemo(
-    () => sales.filter(s =>
-      !searchInvoice || s.sale_number.toLowerCase().includes(searchInvoice.toLowerCase()),
-    ),
+    () => sales
+      .filter(s => (s.sale_items || []).length > 0)  // ✅ exclude orphaned sales with no items
+      .filter(s =>
+        !searchInvoice || s.sale_number.toLowerCase().includes(searchInvoice.toLowerCase()),
+      ),
     [sales, searchInvoice],
   )
 
@@ -157,14 +159,16 @@ export default function ReportsPage() {
   const handleDelete = async () => {
     if (!deleteTarget) return
     setDeleting(true)
+    const target = deleteTarget  // capture before clearing
+    setDeleteTarget(null)        // close dialog immediately
     try {
-      await salesApi.deleteSale(deleteTarget.id)
+      await salesApi.deleteSale(target.id)
+      setSales(prev => prev.filter(s => s.id !== target.id))
       toast.success('Transaction deleted and stock restored')
-      setDeleteTarget(null)
-      setSales(prev => prev.filter(s => s.id !== deleteTarget.id))
-      triggerSales()
-      loadSales()
+      // ✅ Don't call triggerSales() — optimistic local-state removal is sufficient
+      // The row is permanently gone from the UI now
     } catch (e: unknown) {
+      // On error, the row will stay (no filter applied), which is correct
       toast.error(e instanceof Error ? e.message : 'Failed to delete transaction')
     } finally { setDeleting(false) }
   }
