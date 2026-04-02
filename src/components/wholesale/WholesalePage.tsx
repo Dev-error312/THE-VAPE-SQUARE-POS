@@ -277,11 +277,52 @@ export default function WholesalePage() {
 
       if (error) {
         console.error('[Wholesale] Insert error:', error)
-        // Surface the real Supabase error message to the user
         throw new Error(error.message)
       }
 
-      toast.success('Wholesale sale recorded!')
+      // ── Deduct stock from inventory ──────────────────────────────────
+      const stockErrors: string[] = []
+
+      await Promise.all(
+        cartItems.map(async (item) => {
+          // 1. Fetch current stock
+          const { data: productData, error: fetchErr } = await supabase
+            .from('products')
+            .select('total_stock')
+            .eq('id', item.product_id)
+            .eq('business_id', user.business_id)
+            .single()
+
+          if (fetchErr || !productData) {
+            stockErrors.push(`Could not fetch stock for "${item.product_name}"`)
+            return
+          }
+
+          const newStock = (productData.total_stock ?? 0) - item.quantity
+
+          // 2. Update stock (floor at 0, but warn if oversold)
+          const { error: updateErr } = await supabase
+            .from('products')
+            .update({ total_stock: Math.max(0, newStock) })
+            .eq('id', item.product_id)
+            .eq('business_id', user.business_id)
+
+          if (updateErr) {
+            stockErrors.push(`Failed to update stock for "${item.product_name}": ${updateErr.message}`)
+          } else if (newStock < 0) {
+            stockErrors.push(`"${item.product_name}" went below 0 (oversold by ${Math.abs(newStock)})`)
+          }
+        })
+      )
+
+      if (stockErrors.length > 0) {
+        console.warn('[Wholesale] Stock update warnings:', stockErrors)
+        toast.success('Sale recorded, but some stock updates had issues:')
+        stockErrors.forEach(msg => toast.error(msg, { duration: 6000 }))
+      } else {
+        toast.success('Wholesale sale recorded & inventory updated!')
+      }
+
       resetForm()
       load()
     } catch (e: unknown) {
