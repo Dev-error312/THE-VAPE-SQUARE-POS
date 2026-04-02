@@ -132,7 +132,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signInWithGoogle: async (origin = 'login') => {
-    const redirectUrl = new URL(`${window.location.origin}/auth-callback`)
+    // Use the env var on production, fall back to current origin for local dev
+    const baseUrl = import.meta.env.VITE_APP_URL || window.location.origin
+    const redirectUrl = new URL(`${baseUrl}/auth-callback`)
     redirectUrl.searchParams.set('origin', origin)
 
     const { error } = await supabase.auth.signInWithOAuth({
