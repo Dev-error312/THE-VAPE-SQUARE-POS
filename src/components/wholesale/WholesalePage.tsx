@@ -302,12 +302,12 @@ export default function WholesalePage() {
           console.log('[Stock] Product row:', productData)
 
           // 2. Replace 'total_stock' below with whatever column name appears in the log
-          const currentStock = productData.total_stock ?? productData.stock ?? productData.quantity ?? 0
+          const currentStock = productData.stock ?? 0
           const newStock = currentStock - item.quantity
 
           const { error: updateErr } = await supabase
             .from('products')
-            .update({ total_stock: Math.max(0, newStock) })  // ← update this key too if column name differs
+            .update({ stock: Math.max(0, newStock) })  // ← update this key too if column name differs
             .eq('id', item.product_id)
 
           if (updateErr) {
