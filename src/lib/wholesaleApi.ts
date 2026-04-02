@@ -84,16 +84,32 @@ export const wholesaleApi = {
     const businessId = getBusinessId()
     const { data, error } = await supabase
       .from('wholesale_sales')
-      .select('total_amount, profit')
+      .select('total, items')
       .eq('business_id', businessId)
       .gte('sale_date', startDate)
       .lte('sale_date', endDate)
     if (error) return { total_revenue: 0, total_profit: 0, total_sales: 0 }
     const rows = data || []
+    
+    let totalRevenue = 0
+    let totalProfit = 0
+    
+    for (const row of rows) {
+      totalRevenue += row.total || 0
+      
+      // Calculate profit from items: (unit_price - cost_price) * quantity
+      if (row.items && Array.isArray(row.items)) {
+        for (const item of row.items) {
+          const profit = (item.unit_price - item.cost_price) * item.quantity
+          totalProfit += profit
+        }
+      }
+    }
+    
     return {
-      total_revenue: rows.reduce((s, r) => s + (r.total_amount || 0), 0),
-      total_profit:  rows.reduce((s, r) => s + (r.profit || 0), 0),
-      total_sales:   rows.length,
+      total_revenue: totalRevenue,
+      total_profit: totalProfit,
+      total_sales: rows.length,
     }
   },
 }

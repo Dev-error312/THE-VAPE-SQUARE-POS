@@ -6,11 +6,23 @@ import './index.css'
 // ─── Suppress Chrome Extension Noise ───────────────────────────────────────
 // Prevent console spam from browser extensions that don't properly clean up
 // async message listeners (React DevTools, Grammarly, LastPass, ad blockers, etc)
+const isExtensionError = (error: any) => {
+  const message = error?.message || String(error)
+  return (
+    message.includes('message channel closed') ||
+    message.includes('listener indicated an asynchronous response') ||
+    message.includes('Extension context invalidated')
+  )
+}
+
 window.addEventListener('unhandledrejection', (event) => {
-  if (
-    event.reason?.message?.includes('message channel closed') ||
-    event.reason?.message?.includes('listener indicated an asynchronous response')
-  ) {
+  if (isExtensionError(event.reason)) {
+    event.preventDefault() // silently suppress — not an app error
+  }
+})
+
+window.addEventListener('error', (event) => {
+  if (isExtensionError(event.error)) {
     event.preventDefault() // silently suppress — not an app error
   }
 })

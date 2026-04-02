@@ -271,8 +271,6 @@ export default function WholesalePage() {
         created_by:  null,
       }
 
-      console.log('[Wholesale] Inserting:', payload)
-
       const { error } = await supabase.from('wholesale_sales').insert(payload)
 
       if (error) {
@@ -280,44 +278,50 @@ export default function WholesalePage() {
         throw new Error(error.message)
       }
 
-      // ── Deduct stock from inventory ──────────────────────────────────
+      // ── Deduct stock from inventory batches ──────────────────────────────────
       const stockErrors: string[] = []
+      const businessId = user.business_id
 
-      await Promise.all(
-        cartItems.map(async (item) => {
-          // 1. Debug — fetch without business_id filter first to isolate the issue
-          const { data: productData, error: fetchErr } = await supabase
-            .from('products')
-            .select('*')           // fetch all columns so we can log the real shape
-            .eq('id', item.product_id)
-            .single()
+      for (const item of cartItems) {
+        let qtyToDeduct = item.quantity
 
-          if (fetchErr || !productData) {
-            console.error('[Stock] Fetch failed for product_id:', item.product_id, fetchErr)
-            stockErrors.push(`Could not fetch stock for "${item.product_name}"`)
-            return
-          }
+        // fetch all batches for this product with remaining stock
+        const { data: batches, error: batchError } = await supabase
+          .from('inventory_batches')
+          .select('id, quantity_remaining')
+          .eq('product_id', item.product_id)
+          .eq('business_id', businessId)
+          .gt('quantity_remaining', 0)
+          .order('received_at', { ascending: true })
 
-          // Log the full product row so you can see the exact column name
-          console.log('[Stock] Product row:', productData)
+        if (batchError || !batches || batches.length === 0) {
+          console.error('[Wholesale Stock] Batch fetch failed:', batchError)
+          stockErrors.push(`No stock available for "${item.product_name}"`)
+          continue
+        }
 
-          // 2. Replace 'total_stock' below with whatever column name appears in the log
-          const currentStock = productData.stock ?? 0
-          const newStock = currentStock - item.quantity
-
+        // deduct from batches in FIFO order (oldest first)
+        for (const batch of batches) {
+          if (qtyToDeduct <= 0) break
+          const deduct = Math.min(qtyToDeduct, batch.quantity_remaining)
           const { error: updateErr } = await supabase
-            .from('products')
-            .update({ stock: Math.max(0, newStock) })  // ← update this key too if column name differs
-            .eq('id', item.product_id)
+            .from('inventory_batches')
+            .update({ quantity_remaining: batch.quantity_remaining - deduct })
+            .eq('id', batch.id)
+            .eq('business_id', businessId)
 
           if (updateErr) {
-            console.error('[Stock] Update failed:', updateErr)
-            stockErrors.push(`Failed to update stock for "${item.product_name}": ${updateErr.message}`)
-          } else if (newStock < 0) {
-            stockErrors.push(`"${item.product_name}" oversold by ${Math.abs(newStock)}`)
+            console.error('[Wholesale Stock] Update failed:', updateErr)
+            stockErrors.push(`Failed to deduct stock for "${item.product_name}": ${updateErr.message}`)
+            break
           }
-        })
-      )
+          qtyToDeduct -= deduct
+        }
+
+        if (qtyToDeduct > 0) {
+          stockErrors.push(`Insufficient stock for "${item.product_name}" — short by ${qtyToDeduct}`)
+        }
+      }
 
       if (stockErrors.length > 0) {
         console.warn('[Wholesale] Stock update warnings:', stockErrors)
@@ -343,13 +347,59 @@ export default function WholesalePage() {
     setDeleting(true)
     try {
       const user = useAuthStore.getState().user
+      if (!user?.business_id) throw new Error('Not authenticated')
+
+      const businessId = user.business_id
+      const items = deleteTarget.items || []
+
+      // ── Restore inventory for each item ──────────────────────────────────
+      for (const item of items) {
+        let qtyToRestore = item.quantity
+
+        // Fetch all batches for this product, ordered by most recent first (LIFO)
+        const { data: batches, error: batchError } = await supabase
+          .from('inventory_batches')
+          .select('id, quantity_remaining')
+          .eq('product_id', item.product_id)
+          .eq('business_id', businessId)
+          .order('received_at', { ascending: false })
+
+        if (batchError) {
+          console.error('[Wholesale Delete] Batch fetch failed:', batchError)
+          throw new Error(`Failed to restore stock for "${item.product_name}": ${batchError.message}`)
+        }
+
+        if (!batches || batches.length === 0) {
+          throw new Error(`No inventory batches found for "${item.product_name}" to restore stock`)
+        }
+
+        // Restore quantity to batches in LIFO order (most recent first)
+        for (const batch of batches) {
+          if (qtyToRestore <= 0) break
+          const newQuantity = batch.quantity_remaining + qtyToRestore
+          const { error: updateErr } = await supabase
+            .from('inventory_batches')
+            .update({ quantity_remaining: newQuantity })
+            .eq('id', batch.id)
+            .eq('business_id', businessId)
+
+          if (updateErr) {
+            console.error('[Wholesale Delete] Stock restore failed:', updateErr)
+            throw new Error(`Failed to restore stock for "${item.product_name}": ${updateErr.message}`)
+          }
+          qtyToRestore = 0  // restore entire quantity to most recent batch
+        }
+      }
+
+      // ── Delete the sale after inventory is restored ────────────────────────────
       const { error } = await supabase
         .from('wholesale_sales')
         .delete()
         .eq('id', deleteTarget.id)
-        .eq('business_id', user?.business_id)
+        .eq('business_id', businessId)
+
       if (error) throw new Error(error.message)
-      toast.success('Sale deleted')
+      toast.success('Sale deleted and inventory restored')
       setDeleteTarget(null)
       load()
     } catch (e: unknown) {
