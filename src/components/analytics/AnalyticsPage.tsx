@@ -431,7 +431,7 @@ export default function AnalyticsPage() {
                   <tr className="border-t-2 border-slate-300 dark:border-slate-600 bg-slate-100 dark:bg-slate-800/80 font-bold">
                     <td className="px-5 py-3 text-slate-800 dark:text-slate-200">TOTAL</td>
                     <td className="px-5 py-3 text-right font-mono text-slate-800 dark:text-slate-200">{totals.sales}</td>
-                    <td className="px-5 py-3 text-right font-mono text-white">{formatCurrency(totals.revenue)}</td>
+                    <td className="px-5 py-3 text-right font-mono text-slate-800 dark:text-white">{formatCurrency(totals.revenue)}</td>
                     <td className="px-5 py-3 text-right font-mono text-emerald-400">{formatCurrency(totals.gross_profit)}</td>
                     <td className="px-5 py-3 text-right font-mono text-red-400">{totals.expenses > 0 ? `−${formatCurrency(totals.expenses)}` : '—'}</td>
                     <td className="px-5 py-3 text-right font-mono text-amber-400">{totals.damages > 0 ? `−${formatCurrency(totals.damages)}` : '—'}</td>
