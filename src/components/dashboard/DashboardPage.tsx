@@ -5,7 +5,7 @@ import { useRefreshStore } from '../../store/refreshStore'
 import { useIsAdmin } from '../../hooks/useRole'
 import { formatCurrency, formatDate } from '../../utils'
 import { TrendingUp, ShoppingCart, Package, AlertTriangle, DollarSign, BarChart2, RefreshCw } from 'lucide-react'
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 import type { DashboardStats, Sale, Product } from '../../types'
 import LoadingSpinner from '../shared/LoadingSpinner'
 
@@ -160,7 +160,6 @@ export default function DashboardPage() {
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
               <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false}
                 tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />

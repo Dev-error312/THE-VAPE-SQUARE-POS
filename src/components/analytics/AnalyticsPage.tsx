@@ -4,7 +4,7 @@ import { expensesApi, damagedApi } from '../../lib/expensesApi'
 import { wholesaleApi } from '../../lib/wholesaleApi'
 import { formatCurrency, formatDate } from '../../utils'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend
 } from 'recharts'
 import {
@@ -365,7 +365,6 @@ export default function AnalyticsPage() {
               <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Daily Revenue & Profit</h2>
               <ResponsiveContainer width="100%" height={280}>
                 <BarChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                   <XAxis dataKey="dateLabel" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false}
                     tickFormatter={v => v >= 1000 ? `${(v / 1000).toFixed(0)}k` : String(v)} />

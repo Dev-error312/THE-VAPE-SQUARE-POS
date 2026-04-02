@@ -9,7 +9,7 @@ import { useIsAdmin } from '../../hooks/useRole'
 import { formatCurrency, formatDate } from '../../utils'
 import type { Sale } from '../../types'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
+  BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend,
 } from 'recharts'
 import {
@@ -455,7 +455,6 @@ export default function ReportsPage() {
                 </h2>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
                     <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis
                       tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false}
