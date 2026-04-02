@@ -365,30 +365,21 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
                 </div>
                 <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
 
-                {/* Items — show list price, discount, final amount */}
+                {/* Items — show SN, product name, qty×price, list price total, discount */}
                 {saleItems.map((item, idx) => {
-                  const entered      = getItemEnteredAmount(item.product.id)
                   const itemDiscount = getItemDiscount(item.product.id)
                   const listPrice    = item.unit_price * item.quantity
                   return (
                     <div key={idx} style={{ marginBottom: 6 }}>
-                      <div style={{ fontWeight: 'bold' }}>{item.product.name}</div>
+                      <div style={{ fontWeight: 'bold' }}>{idx + 1}. {item.product.name}</div>
                       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                         <span>{item.quantity} × रु {item.unit_price}</span>
-                        <span style={{ color: '#888' }}>
-                          रु {listPrice}
-                        </span>
+                        <span>रु {listPrice.toFixed(0)}</span>
                       </div>
                       {itemDiscount > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                           <span>Discount</span>
                           <span>-रु {itemDiscount.toFixed(0)}</span>
-                        </div>
-                      )}
-                      {itemDiscount > 0 && (
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                          <span>Final Amount</span>
-                          <span>रु {entered.toFixed(0)}</span>
                         </div>
                       )}
                     </div>
