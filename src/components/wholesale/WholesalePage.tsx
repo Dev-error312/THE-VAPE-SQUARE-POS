@@ -285,32 +285,36 @@ export default function WholesalePage() {
 
       await Promise.all(
         cartItems.map(async (item) => {
-          // 1. Fetch current stock
+          // 1. Debug — fetch without business_id filter first to isolate the issue
           const { data: productData, error: fetchErr } = await supabase
             .from('products')
-            .select('total_stock')
+            .select('*')           // fetch all columns so we can log the real shape
             .eq('id', item.product_id)
-            .eq('business_id', user.business_id)
             .single()
 
           if (fetchErr || !productData) {
+            console.error('[Stock] Fetch failed for product_id:', item.product_id, fetchErr)
             stockErrors.push(`Could not fetch stock for "${item.product_name}"`)
             return
           }
 
-          const newStock = (productData.total_stock ?? 0) - item.quantity
+          // Log the full product row so you can see the exact column name
+          console.log('[Stock] Product row:', productData)
 
-          // 2. Update stock (floor at 0, but warn if oversold)
+          // 2. Replace 'total_stock' below with whatever column name appears in the log
+          const currentStock = productData.total_stock ?? productData.stock ?? productData.quantity ?? 0
+          const newStock = currentStock - item.quantity
+
           const { error: updateErr } = await supabase
             .from('products')
-            .update({ total_stock: Math.max(0, newStock) })
+            .update({ total_stock: Math.max(0, newStock) })  // ← update this key too if column name differs
             .eq('id', item.product_id)
-            .eq('business_id', user.business_id)
 
           if (updateErr) {
+            console.error('[Stock] Update failed:', updateErr)
             stockErrors.push(`Failed to update stock for "${item.product_name}": ${updateErr.message}`)
           } else if (newStock < 0) {
-            stockErrors.push(`"${item.product_name}" went below 0 (oversold by ${Math.abs(newStock)})`)
+            stockErrors.push(`"${item.product_name}" oversold by ${Math.abs(newStock)}`)
           }
         })
       )
