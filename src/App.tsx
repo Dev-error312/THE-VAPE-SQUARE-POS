@@ -5,6 +5,7 @@ import { useAuthStore } from './store/authStore'
 
 import AuthPage from './components/auth/AuthPage'
 import RegisterBusinessPage from './components/auth/RegisterBusinessPage'
+import AuthCallbackPage from './components/auth/AuthCallbackPage'
 import Layout from './components/shared/Layout'
 import ProtectedRoute from './components/shared/ProtectedRoute'
 import DashboardPage from './components/dashboard/DashboardPage'
@@ -27,9 +28,9 @@ export default function App() {
   // Update document title with business name
   useEffect(() => {
     if (user?.business_name) {
-      document.title = `Karobar - ${user.business_name}`
+      document.title = `Vyapaar - ${user.business_name}`
     } else {
-      document.title = 'Karobar'
+      document.title = 'Vyapaar'
     }
   }, [user?.business_name])
 
@@ -54,9 +55,10 @@ export default function App() {
         }}
       />
       <Routes>
-        <Route path="/login"     element={<AuthPage />} />
-        <Route path="/register"  element={<RegisterBusinessPage />} />
-        <Route path="/"          element={wrap(<Navigate to="/dashboard" replace />)} />
+        <Route path="/login"          element={<AuthPage />} />
+        <Route path="/register"       element={<RegisterBusinessPage />} />
+        <Route path="/auth-callback"  element={<AuthCallbackPage />} />
+        <Route path="/"               element={wrap(<Navigate to="/dashboard" replace />)} />
         <Route path="/dashboard" element={wrap(<DashboardPage />)} />
         <Route path="/pos"       element={wrap(<POSPage />)} />
         <Route path="/inventory" element={wrap(<InventoryPage />)} />

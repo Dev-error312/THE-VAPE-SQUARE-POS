@@ -1,164 +1,297 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
-import { ShoppingCart, Eye, EyeOff, Zap } from 'lucide-react'
+import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
+import AuthLayout from './AuthLayout'
+
+// ─── Google Icon SVG ──────────────────────────────────────────────────────────
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg">
+      <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+      <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+      <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+      <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+    </svg>
+  )
+}
 
 export default function AuthPage() {
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [fullName, setFullName] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
-  const { signIn, signUp, user } = useAuthStore()
+  const { signIn, signInWithGoogle, user } = useAuthStore()
   const navigate = useNavigate()
 
-  // Redirect as soon as user is set in the store
   useEffect(() => {
-    if (user) {
-      navigate('/dashboard', { replace: true })
-    }
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (user) navigate('/dashboard', { replace: true })
   }, [user, navigate])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     try {
-      if (mode === 'login') {
-        const { error } = await signIn(email, password)
-        if (error) {
-          toast.error(error)
-        }
-        // Navigation handled by useEffect above when user is set in store
-      } else {
-        if (!fullName.trim()) {
-          toast.error('Please enter your full name')
-          return
-        }
-        const { error } = await signUp(email, password, fullName)
-        if (error) toast.error(error)
-        else toast.success('Account created! Check your email to verify, then sign in.')
-      }
+      const { error } = await signIn(email, password)
+      if (error) toast.error(error)
     } finally {
       setSubmitting(false)
     }
   }
 
+  const handleGoogleAuth = async () => {
+    setGoogleLoading(true)
+    try {
+      const { error } = await signInWithGoogle('login')
+      if (error) toast.error(error)
+    } catch {
+      toast.error('Google sign-in failed. Please try again.')
+    } finally {
+      setGoogleLoading(false)
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex">
-      {/* Left Panel */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary-900 via-slate-900 to-slate-950 p-12 flex-col justify-between relative overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-20 left-20 w-72 h-72 bg-primary-500 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-20 w-96 h-96 bg-primary-700 rounded-full blur-3xl" />
-        </div>
-        <div className="relative z-10">
-          <div className="flex items-center gap-3 mb-16">
-            <div className="w-10 h-10 bg-primary-500 rounded-xl flex items-center justify-center">
-              <ShoppingCart className="w-5 h-5 text-white" />
-            </div>
-            <span className="text-xl font-bold text-slate-900 dark:text-white">KaroBar</span>
+    <AuthLayout>
+      <style>{`
+        .form-card {
+          width: 100%;
+          max-width: 420px;
+          position: relative;
+          opacity: 0;
+          transform: translateY(16px);
+          transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .form-card.mounted { opacity: 1; transform: translateY(0); }
+
+        .form-title {
+          font-family: 'DM Sans', sans-serif;
+          font-size: 1.75rem;
+          font-weight: 700;
+          color: #fff;
+          letter-spacing: 0;
+          margin-bottom: 0.375rem;
+        }
+        .form-sub {
+          font-size: 0.875rem;
+          color: rgba(255,255,255,0.4);
+          margin-bottom: 1.75rem;
+        }
+
+        .btn-google {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.625rem;
+          padding: 0.75rem;
+          background: rgba(255,255,255,0.05);
+          border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 12px;
+          color: rgba(255,255,255,0.85);
+          font-size: 0.9rem;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-family: 'DM Sans', sans-serif;
+          margin-bottom: 1.5rem;
+        }
+        .btn-google:hover:not(:disabled) {
+          background: rgba(255,255,255,0.08);
+          border-color: rgba(255,255,255,0.18);
+          transform: translateY(-1px);
+        }
+        .btn-google:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .divider {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          margin-bottom: 1.5rem;
+          color: rgba(255,255,255,0.2);
+          font-size: 0.75rem;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
+        }
+        .divider::before, .divider::after {
+          content: '';
+          flex: 1;
+          height: 1px;
+          background: rgba(255,255,255,0.08);
+        }
+
+        .field { margin-bottom: 1rem; }
+        .field-label {
+          display: block;
+          font-size: 0.8125rem;
+          font-weight: 500;
+          color: rgba(255,255,255,0.5);
+          margin-bottom: 0.5rem;
+          letter-spacing: 0.02em;
+        }
+        .field-input {
+          width: 100%;
+          box-sizing: border-box;
+          padding: 0.75rem 1rem;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 12px;
+          color: #fff;
+          font-size: 0.9375rem;
+          font-family: 'DM Sans', sans-serif;
+          outline: none;
+          transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+        }
+        .field-input::placeholder { color: rgba(255,255,255,0.2); }
+        .field-input:focus {
+          border-color: rgba(99,102,241,0.5);
+          background: rgba(99,102,241,0.05);
+          box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+        }
+        .field-pw { position: relative; }
+        .field-pw .field-input { padding-right: 2.75rem; }
+        .pw-toggle {
+          position: absolute;
+          right: 0.875rem;
+          top: 50%;
+          transform: translateY(-50%);
+          background: none;
+          border: none;
+          color: rgba(255,255,255,0.3);
+          cursor: pointer;
+          padding: 0;
+          display: flex;
+          align-items: center;
+          transition: color 0.2s;
+        }
+        .pw-toggle:hover { color: rgba(255,255,255,0.65); }
+
+        .btn-submit {
+          width: 100%;
+          padding: 0.875rem;
+          background: linear-gradient(135deg, #6366f1, #8b5cf6);
+          border: none;
+          border-radius: 12px;
+          color: #fff;
+          font-size: 0.9375rem;
+          font-weight: 600;
+          font-family: 'DM Sans', sans-serif;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 0.5rem;
+          margin-top: 0.25rem;
+          transition: all 0.2s;
+          box-shadow: 0 4px 20px rgba(99,102,241,0.3);
+          letter-spacing: 0.01em;
+        }
+        .btn-submit:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 6px 28px rgba(99,102,241,0.45);
+        }
+        .btn-submit:active:not(:disabled) { transform: translateY(0); }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        .spin {
+          width: 18px; height: 18px;
+          border: 2px solid rgba(255,255,255,0.3);
+          border-top-color: #fff;
+          border-radius: 50%;
+          animation: spin 0.7s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .form-footer {
+          text-align: center;
+          margin-top: 1.5rem;
+          font-size: 0.875rem;
+          color: rgba(255,255,255,0.35);
+        }
+        .footer-link {
+          color: #818cf8;
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-weight: 500;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 0.875rem;
+          transition: color 0.2s;
+          padding: 0;
+        }
+        .footer-link:hover { color: #a5b4fc; }
+
+        .mobile-brand {
+          display: flex;
+          align-items: center;
+          gap: 0.625rem;
+          margin-bottom: 2rem;
+        }
+        @media (min-width: 1024px) { .mobile-brand { display: none; } }
+      `}</style>
+
+      <div className={`form-card ${mounted ? 'mounted' : ''}`}>
+        <div className="mobile-brand">
+          <div className="brand-icon" style={{ width: 36, height: 36, borderRadius: 10 }}>
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>
+            </svg>
           </div>
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white leading-tight mb-6">
-            Complete Point of Sale
-            <span className="text-primary-400"> Solution</span>
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400 text-lg leading-relaxed">
-            Manage inventory, process sales, track profits, and grow your business — all in one place.
-          </p>
+          <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '1.2rem', fontWeight: 700, color: '#fff' }}>Vyapaar</span>
         </div>
-        <div className="relative z-10 grid grid-cols-2 gap-4">
-          {[
-            { icon: '📦', label: 'Inventory Tracking' },
-            { icon: '🧾', label: 'Invoice Generation' },
-            { icon: '📊', label: 'Analytics Dashboard' },
-            { icon: '💰', label: 'Profit Reports' },
-          ].map((f) => (
-            <div key={f.label} className="bg-white/5 border border-white/10 rounded-xl p-4">
-              <div className="text-2xl mb-2">{f.icon}</div>
-              <div className="text-sm font-medium text-slate-700 dark:text-slate-300">{f.label}</div>
+
+        <p className="form-title">Welcome back</p>
+        <p className="form-sub">Sign in to your Vyapaar account.</p>
+
+        <button className="btn-google" onClick={handleGoogleAuth} disabled={googleLoading}>
+          {googleLoading ? <span className="spin" /> : <GoogleIcon />}
+          {googleLoading ? 'Connecting…' : 'Continue with Google'}
+        </button>
+
+        <div className="divider">or continue with email</div>
+
+        <form onSubmit={handleSubmit} className="fields-enter">
+          <div className="field">
+            <label className="field-label">Email Address</label>
+            <input type="email" className="field-input" placeholder="you@example.com"
+              value={email} onChange={e => setEmail(e.target.value)} required />
+          </div>
+
+          <div className="field">
+            <label className="field-label">Password</label>
+            <div className="field-pw">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="field-input"
+                placeholder="••••••••"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required minLength={6}
+              />
+              <button type="button" className="pw-toggle" onClick={() => setShowPassword(!showPassword)}>
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
-          ))}
+          </div>
+
+          <button type="submit" className="btn-submit" disabled={submitting}>
+            {submitting ? <span className="spin" /> : 'Sign In'}
+          </button>
+        </form>
+
+        <div className="form-footer">
+          New? Register Business →{' '}
+          <button type="button" className="footer-link" onClick={() => navigate('/register')}>Get Started</button>
         </div>
       </div>
-
-      {/* Right Panel */}
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="w-full max-w-md">
-          <div className="flex items-center gap-3 mb-10 lg:hidden">
-            <div className="w-9 h-9 bg-primary-500 rounded-xl flex items-center justify-center">
-              <ShoppingCart className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-bold text-slate-900 dark:text-white">KaroBar</span>
-          </div>
-
-          <div className="mb-8">
-            <h2 className="text-3xl font-bold text-slate-900 dark:text-white mb-2">
-              {mode === 'login' ? 'Sign in' : 'Create account'}
-            </h2>
-            <p className="text-slate-600 dark:text-slate-400">
-              {mode === 'login'
-                ? 'Enter your credentials to continue.'
-                : 'Set up your POS system account.'}
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {mode === 'signup' && (
-              <div>
-                <label className="label">Full Name</label>
-                <input type="text" className="input" placeholder="John Doe"
-                  value={fullName} onChange={e => setFullName(e.target.value)} required />
-              </div>
-            )}
-            <div>
-              <label className="label">Email Address</label>
-              <input type="email" className="input" placeholder="you@example.com"
-                value={email} onChange={e => setEmail(e.target.value)} required />
-            </div>
-            <div>
-              <label className="label">Password</label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  className="input pr-10" placeholder="••••••••"
-                  value={password} onChange={e => setPassword(e.target.value)}
-                  required minLength={6}
-                />
-                <button type="button" onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 transition-colors">
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <button type="submit" disabled={submitting}
-              className="btn-primary w-full py-3 flex items-center justify-center gap-2 text-base">
-              {submitting ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              ) : (
-                <><Zap className="w-4 h-4" />{mode === 'login' ? 'Sign In' : 'Create Account'}</>
-              )}
-            </button>
-          </form>
-
-          <div className="mt-6 space-y-3">
-            {mode === 'login' && (
-              <p className="text-center text-slate-600 dark:text-slate-400 text-sm">
-                New? Register Business →{' '}
-                <button
-                  type="button"
-                  onClick={() => navigate('/register')}
-                  className="text-primary-400 hover:text-primary-300 font-medium transition-colors">
-                  Get Started
-                </button>
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+    </AuthLayout>
   )
 }

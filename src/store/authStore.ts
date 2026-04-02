@@ -8,10 +8,12 @@ interface AuthState {
   loading: boolean
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>
+  signInWithGoogle: (origin?: 'login' | 'register') => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   clearUser: () => void
   initialize: () => Promise<void>
   fetchProfile: (authUserId: string) => Promise<void>
+  checkUserStatus: () => Promise<{ isNewUser: boolean; hasBusiness: boolean }>
 }
 
 async function getOrCreateUserProfile(authUser: {
@@ -34,20 +36,17 @@ async function getOrCreateUserProfile(authUser: {
   }
 
   try {
-    // 🔍 Check if user profile already exists
     const { data: existingProfile, error: profileError } = await supabase
       .from('user_profiles')
       .select('*')
       .eq('auth_user_id', authUser.id)
       .single()
 
-    // Handle query errors explicitly
-    if (profileError) {
+    if (profileError && profileError.code !== 'PGRST116') {
       console.warn('Profile query error:', profileError)
       return fallback
     }
 
-    // 📦 If profile exists, fetch with business info
     if (existingProfile) {
       const { data: businessData, error: businessError } = await supabase
         .from('businesses')
@@ -59,7 +58,6 @@ async function getOrCreateUserProfile(authUser: {
         console.warn('Business query error:', businessError, 'business_id:', existingProfile.business_id)
       }
 
-      // ✅ Double-check role is valid (admin or cashier)
       const role = (existingProfile.role === 'admin' || existingProfile.role === 'cashier')
         ? existingProfile.role
         : 'cashier'
@@ -77,6 +75,7 @@ async function getOrCreateUserProfile(authUser: {
       }
     }
 
+    console.log('No existing profile found for:', authUser.id, '- treating as new user')
     return fallback
 
   } catch (error) {
@@ -92,15 +91,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   initialize: async () => {
     try {
-      // Directly check for session
       const { data: { session }, error } = await supabase.auth.getSession()
-
       if (error || !session) {
         set({ user: null, session: null, loading: false })
         return
       }
-
-      // Session exists — get/create user profile
       const user = await getOrCreateUserProfile(session.user)
       set({ session, user, loading: false })
     } catch {
@@ -136,13 +131,24 @@ export const useAuthStore = create<AuthState>((set) => ({
     }
   },
 
+  signInWithGoogle: async (origin = 'login') => {
+    const redirectUrl = new URL(`${window.location.origin}/auth-callback`)
+    redirectUrl.searchParams.set('origin', origin)
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: redirectUrl.toString() },
+    })
+    if (error) return { error: error.message }
+    return { error: null }
+  },
+
   signOut: async () => {
     await supabase.auth.signOut()
     set({ user: null, session: null, loading: false })
   },
 
   clearUser: () => {
-    // Force clear user without calling signOut (for token expiration scenarios)
     set({ user: null, session: null, loading: false })
   },
 
@@ -158,6 +164,74 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (error) {
       console.error('Failed to fetch profile:', error)
       set({ loading: false })
+    }
+  },
+
+  // ─── FIX: Determine new vs existing user by whether a profile row exists ────
+  // Previously, the code checked `business_id !== fallback_uuid` which wrongly
+  // flagged existing Google users as new if their business wasn't found.
+  // Now we do a clean, direct check: does a user_profiles row exist for this user?
+  checkUserStatus: async () => {
+    try {
+      const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
+
+      if (authError || !authUser) {
+        console.warn('No authenticated user found:', authError?.message)
+        return { isNewUser: true, hasBusiness: false }
+      }
+
+      console.log('Authenticated user found:', authUser.email)
+
+      // ── Step 1: Does a profile row exist for this auth user? ──────────────
+      const { data: profileRow, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('id, business_id, role')
+        .eq('auth_user_id', authUser.id)
+        .single()
+
+      // PGRST116 = no row found → genuinely new user
+      const profileExists = !profileError || profileError.code !== 'PGRST116'
+
+      if (profileError && profileError.code !== 'PGRST116') {
+        console.warn('Profile lookup error:', profileError)
+        // On unexpected DB errors, fail safe: send to register rather than crash
+        return { isNewUser: true, hasBusiness: false }
+      }
+
+      const isNewUser = !profileExists || !profileRow
+
+      // ── Step 2: Does their business exist and is it a real one? ──────────
+      let hasBusiness = false
+      if (profileRow?.business_id) {
+        const FALLBACK_BUSINESS_ID = '00000000-0000-0000-0000-000000000001'
+        if (profileRow.business_id !== FALLBACK_BUSINESS_ID) {
+          const { data: biz, error: bizError } = await supabase
+            .from('businesses')
+            .select('id')
+            .eq('id', profileRow.business_id)
+            .single()
+          hasBusiness = !bizError && !!biz
+        }
+      }
+
+      console.log('User status check:', {
+        email: authUser.email,
+        isNewUser,
+        hasBusiness,
+        profileExists,
+        business_id: profileRow?.business_id,
+      })
+
+      // ── Step 3: Load full profile into store if they're an existing user ──
+      if (!isNewUser) {
+        const userProfile = await getOrCreateUserProfile(authUser)
+        set({ user: userProfile, loading: false })
+      }
+
+      return { isNewUser, hasBusiness }
+    } catch (error) {
+      console.error('Error checking user status:', error)
+      return { isNewUser: true, hasBusiness: false }
     }
   },
 }))
