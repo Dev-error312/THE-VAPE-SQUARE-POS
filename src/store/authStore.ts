@@ -92,13 +92,35 @@ export const useAuthStore = create<AuthState>((set) => ({
   initialize: async () => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession()
-      if (error || !session) {
+      
+      // Session retrieval failed (could be network error or invalid token)
+      if (error) {
+        console.warn('⚠️ Session retrieval error:', error.message)
+        // If it's a refresh token error, clear the session
+        if (error.message?.includes('refresh') || error.message?.includes('Invalid')) {
+          console.log('🔄 Clearing invalid session')
+          await supabase.auth.signOut().catch(() => {}) // Silently fail if already signed out
+        }
         set({ user: null, session: null, loading: false })
         return
       }
-      const user = await getOrCreateUserProfile(session.user)
-      set({ session, user, loading: false })
-    } catch {
+      
+      // No session found
+      if (!session) {
+        set({ user: null, session: null, loading: false })
+        return
+      }
+      
+      // Session exists, load user profile
+      try {
+        const user = await getOrCreateUserProfile(session.user)
+        set({ session, user, loading: false })
+      } catch (profileError) {
+        console.error('Failed to load profile:', profileError)
+        set({ user: null, session: null, loading: false })
+      }
+    } catch (error) {
+      console.error('Error during auth initialization:', error)
       set({ user: null, session: null, loading: false })
     }
   },
@@ -106,14 +128,35 @@ export const useAuthStore = create<AuthState>((set) => ({
   signIn: async (email, password) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) return { error: error.message }
-      if (!data.session || !data.user) return { error: 'Login failed. Please try again.' }
+      
+      if (error) {
+        // User-friendly error messages
+        if (error.message?.includes('Invalid login credentials')) {
+          return { error: 'Incorrect email or password' }
+        }
+        if (error.message?.includes('Email not confirmed')) {
+          return { error: 'Please confirm your email before signing in' }
+        }
+        return { error: error.message || 'Login failed' }
+      }
+      
+      if (!data.session || !data.user) {
+        return { error: 'Login failed. Please try again.' }
+      }
 
-      const user = await getOrCreateUserProfile(data.user)
-      set({ session: data.session, user, loading: false })
-      return { error: null }
+      try {
+        const user = await getOrCreateUserProfile(data.user)
+        set({ session: data.session, user, loading: false })
+        return { error: null }
+      } catch (profileError) {
+        console.error('Failed to load profile after login:', profileError)
+        // Still log them in even if profile load fails
+        set({ session: data.session, user: null, loading: false })
+        return { error: null }
+      }
     } catch (e: unknown) {
-      return { error: e instanceof Error ? e.message : 'Login failed' }
+      const message = e instanceof Error ? e.message : 'Login failed'
+      return { error: message }
     }
   },
 

@@ -11,8 +11,18 @@ const isExtensionError = (error: any) => {
   return (
     message.includes('message channel closed') ||
     message.includes('listener indicated an asynchronous response') ||
-    message.includes('Extension context invalidated')
+    message.includes('Extension context invalidated') ||
+    message.includes('The message port closed before a response was received')
   )
+}
+
+// Suppress in console.error to prevent logging
+const originalError = console.error
+console.error = function(...args: any[]) {
+  const message = args[0]?.message || String(args[0])
+  if (!isExtensionError(message)) {
+    originalError.apply(console, args)
+  }
 }
 
 window.addEventListener('unhandledrejection', (event) => {

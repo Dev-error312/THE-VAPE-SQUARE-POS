@@ -13,6 +13,7 @@ import POSPage from './components/pos/POSPage'
 import InventoryPage from './components/inventory/InventoryPage'
 import ReportsPage from './components/reports/ReportsPage'
 import AnalyticsPage from './components/analytics/AnalyticsPage'
+import AccountingPage from './components/accounting/AccountingPage'
 import ExpensesPage from './components/expenses/ExpensesPage'
 import CreditsPage from './components/credits/CreditsPage'
 import WholesalePage from './components/wholesale/WholesalePage'
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="/pos"       element={wrap(<POSPage />)} />
         <Route path="/inventory" element={wrap(<InventoryPage />)} />
         <Route path="/reports"   element={wrap(<ReportsPage />)} />
+        <Route path="/accounting" element={adminWrap(<AccountingPage />)} />
         <Route path="/wholesale" element={wrap(<WholesalePage />)} />
         <Route path="/profile"   element={wrap(<ProfilePage />)} />
         <Route path="/expenses"  element={wrap(<ExpensesPage />)} />

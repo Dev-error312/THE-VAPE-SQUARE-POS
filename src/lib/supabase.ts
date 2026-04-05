@@ -30,8 +30,8 @@ export const supabase = createClient(
 // Handle token refresh failures and session expiration
 supabase.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_OUT') {
-    // User explicitly signed out
-    console.log('✋ User signed out')
+    // User explicitly signed out or session invalidated
+    console.log('✋ User signed out or session invalidated')
     try {
       const { useAuthStore } = await import('../store/authStore')
       useAuthStore.getState().clearUser?.()
@@ -42,14 +42,30 @@ supabase.auth.onAuthStateChange(async (event, session) => {
 
   if (event === 'TOKEN_REFRESHED' && !session) {
     // Token refresh failed — session is dead
-    console.error('❌ Token refresh failed — session expired')
+    console.error('❌ Token refresh failed — session expired or invalid')
     try {
       const { useAuthStore } = await import('../store/authStore')
       const authStore = useAuthStore.getState()
       authStore.clearUser?.()
-      window.location.href = '/auth'
+      // Redirect to login only if not already there
+      if (!window.location.pathname.includes('/auth')) {
+        window.location.href = '/auth'
+      }
     } catch {
-      window.location.href = '/auth'
+      if (!window.location.pathname.includes('/auth')) {
+        window.location.href = '/auth'
+      }
+    }
+  }
+
+  if (event === 'USER_UPDATED' && !session) {
+    // Session became invalid during app usage
+    console.warn('⚠️ Session became invalid during login')
+    try {
+      const { useAuthStore } = await import('../store/authStore')
+      useAuthStore.getState().clearUser?.()
+    } catch {
+      // continue
     }
   }
 })
