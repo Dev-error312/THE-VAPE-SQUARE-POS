@@ -18,7 +18,7 @@ const MAIN_NAV = [
   { to: '/inventory', icon: Package,          label: 'Inventory',    adminOnly: false },
   { to: '/wholesale', icon: Store,            label: 'Wholesale',    adminOnly: false },
   { to: '/reports',   icon: BarChart3,        label: 'Reports',      adminOnly: true  },
-  { to: '/accounting', icon: Calculator,      label: 'Accounting',   adminOnly: true  },
+  // { to: '/accounting', icon: Calculator,      label: 'Accounting',   adminOnly: true  },
   { to: '/analytics', icon: TrendingUp,       label: 'Analytics',    adminOnly: true  },
   { to: '/employees', icon: Users,            label: 'Employees',    adminOnly: true  },
   { to: '/expenses',  icon: DollarSign,       label: 'Expenses',     adminOnly: true  },
