@@ -62,6 +62,8 @@ export default function ReportsPage() {
   // ── restock state ───────────────────────────────────────────────────────
   const [restocks,        setRestocks]        = useState<RestockRecord[]>([])
   const [restocksLoading, setRestocksLoading] = useState(false)
+  const [deleteRestockTarget, setDeleteRestockTarget] = useState<RestockRecord | null>(null)
+  const [deletingRestock,    setDeletingRestock]    = useState(false)
 
   // ── globals ─────────────────────────────────────────────────────────────
   const businessId = useBusinessId()
@@ -171,6 +173,22 @@ export default function ReportsPage() {
       // On error, the row will stay (no filter applied), which is correct
       toast.error(e instanceof Error ? e.message : 'Failed to delete transaction')
     } finally { setDeleting(false) }
+  }
+
+  const handleDeleteRestock = async () => {
+    if (!deleteRestockTarget) return
+    setDeletingRestock(true)
+    const target = deleteRestockTarget
+    setDeleteRestockTarget(null)
+    try {
+      await purchasesApi.deleteRestock(target.id)
+      setRestocks(prev => prev.filter(r => r.id !== target.id))
+      toast.success('Restock deleted and inventory restored')
+      // Trigger refresh to sync
+      useRefreshStore.getState().triggerSales()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to delete restock')
+    } finally { setDeletingRestock(false) }
   }
 
   const handleExportSales = () => {
@@ -732,7 +750,7 @@ export default function ReportsPage() {
                 <table className="w-full">
 
                   {/* ─── Header
-                      Cols: Date | Product | Qty | Cost/Unit(*) | Total Cost | Payment(*) | Paid(**) | Remaining(**) | Supplier(***)
+                      Cols: Date | Product | Qty | Cost/Unit(*) | Total Cost | Payment(*) | Paid(**) | Remaining(**) | Supplier(***) | Actions
                       (*) hidden below sm  (**) hidden below md  (***) hidden below lg
                   ─── */}
                   <thead>
@@ -746,6 +764,7 @@ export default function ReportsPage() {
                       <th className="text-right px-4 py-3 whitespace-nowrap hidden md:table-cell">Paid</th>
                       <th className="text-right px-4 py-3 whitespace-nowrap hidden md:table-cell">Remaining</th>
                       <th className="text-left  px-4 py-3 whitespace-nowrap hidden lg:table-cell">Supplier</th>
+                      <th className="text-center px-4 py-3 whitespace-nowrap">Actions</th>
                     </tr>
                   </thead>
 
@@ -793,6 +812,14 @@ export default function ReportsPage() {
                         <td className="px-4 py-3 text-sm text-slate-600 dark:text-slate-400 max-w-[120px] truncate hidden lg:table-cell">
                           {r.supplier_name ?? <span className="text-slate-600">—</span>}
                         </td>
+                        <td className="px-4 py-3 text-center">
+                          <button
+                            onClick={() => setDeleteRestockTarget(r)}
+                            className="p-1.5 rounded-lg text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -835,6 +862,8 @@ export default function ReportsPage() {
                         </td>
                         {/* Supplier — blank */}
                         <td className="px-4 py-3 hidden lg:table-cell" />
+                        {/* Actions — blank */}
+                        <td className="px-4 py-3" />
                       </tr>
                     </tfoot>
                   )}
@@ -853,16 +882,28 @@ export default function ReportsPage() {
       />
 
       {isAdmin && (
-        <ConfirmDialog
-          isOpen={!!deleteTarget}
-          onClose={() => setDeleteTarget(null)}
-          onConfirm={handleDelete}
-          title="Delete Transaction"
-          message={`Delete "${deleteTarget?.sale_number}"? Stock will be restored for all items. This cannot be undone.`}
-          confirmLabel="Delete & Restore Stock"
-          danger
-          loading={deleting}
-        />
+        <>
+          <ConfirmDialog
+            isOpen={!!deleteTarget}
+            onClose={() => setDeleteTarget(null)}
+            onConfirm={handleDelete}
+            title="Delete Transaction"
+            message={`Delete "${deleteTarget?.sale_number}"? Stock will be restored for all items. This cannot be undone.`}
+            confirmLabel="Delete & Restore Stock"
+            danger
+            loading={deleting}
+          />
+          <ConfirmDialog
+            isOpen={!!deleteRestockTarget}
+            onClose={() => setDeleteRestockTarget(null)}
+            onConfirm={handleDeleteRestock}
+            title="Delete Restock"
+            message={`Delete ${deleteRestockTarget?.product_name} restock? Inventory batch will be removed. This cannot be undone.`}
+            confirmLabel="Delete & Restore Inventory"
+            danger
+            loading={deletingRestock}
+          />
+        </>
       )}
     </div>
   )

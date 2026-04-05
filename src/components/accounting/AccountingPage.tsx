@@ -32,6 +32,7 @@ interface AccountingData {
   retailShare: number
   wholesaleShare: number
   hasOpeningBalance: boolean
+  openingBalanceDate: string
 }
 
 const fmt = (n: number) =>
@@ -201,18 +202,22 @@ function OpeningBalanceModal({
   onSave,
   onClose,
   saving,
+  initialCash,
+  initialDate,
 }: {
   onSave: (data: { cash: number; date: string }) => Promise<void>
   onClose: () => void
   saving: boolean
+  initialCash?: number
+  initialDate?: string
 }) {
-  const [cash, setCash] = useState('')
+  const [cash, setCash] = useState(initialCash ? String(initialCash) : '')
   // Get today's date in YYYY-MM-DD format
   const today = new Date().toISOString().split('T')[0]
-  const [date, setDate] = useState(today)
+  const [date, setDate] = useState(initialDate || today)
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Set Opening Balance">
+    <Modal isOpen={true} onClose={onClose} title={initialCash ? "Edit Opening Balance" : "Set Opening Balance"}>
       <div className="space-y-4">
         <div>
           <label className="label">Date</label>
@@ -271,7 +276,7 @@ function OpeningBalanceModal({
             disabled={saving || !cash}
             className="btn-primary flex-1"
           >
-            {saving ? 'Saving...' : 'Save Opening Balance'}
+            {saving ? 'Saving...' : initialCash ? 'Update Opening Balance' : 'Save Opening Balance'}
           </button>
         </div>
       </div>
@@ -292,7 +297,7 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
       }
     }
 
-    const [saleItemRows, expRows, closingInventoryRows, damageRows, restockRows, wholesaleRows] = await Promise.all([
+    const [saleItemRows, expRows, closingInventoryRows, openingInventoryRows, damageRows, restockRows, wholesaleRows] = await Promise.all([
       execQuery(() =>
         supabase
           .from('sale_items')
@@ -310,12 +315,21 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
           .gte('expense_date', from)
           .lte('expense_date', to)
       ),
+      // Closing stock: all batches received ON OR BEFORE end date
       execQuery(() =>
         supabase
           .from('inventory_batches')
           .select('cost_price,quantity_remaining')
           .eq('business_id', businessId)
           .lte('received_at', `${to}T23:59:59.999Z`)
+      ),
+      // Opening stock: all batches received STRICTLY BEFORE start date
+      execQuery(() =>
+        supabase
+          .from('inventory_batches')
+          .select('cost_price,quantity_remaining')
+          .eq('business_id', businessId)
+          .lt('received_at', `${from}T00:00:00.000Z`)
       ),
       execQuery(() =>
         supabase
@@ -346,23 +360,31 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
     // Fetch opening cash from DB
     let openingCash = 0
     let hasOpeningBalance = false
+    let openingBalanceDate = ''
     try {
       const { data: obRows } = await supabase
         .from('accounting_opening_balance')
-        .select('cash_amount')
+        .select('cash_amount,balance_date')
         .eq('business_id', businessId)
         .lte('balance_date', from)
         .order('balance_date', { ascending: false })
         .limit(1)
       if (obRows?.[0]) {
         openingCash = Number(obRows[0].cash_amount ?? 0)
+        openingBalanceDate = obRows[0].balance_date ?? ''
         hasOpeningBalance = true
       }
     } catch (e) {
       console.log('Opening balance not available:', e)
     }
 
-    // Calculate closing stock (actual current inventory value)
+    // ✅ Opening stock: inventory value strictly before the period starts
+    let openingStock = 0
+    for (const batch of openingInventoryRows) {
+      openingStock += Number(batch.quantity_remaining ?? 0) * Number(batch.cost_price ?? 0)
+    }
+
+    // ✅ Closing stock: inventory value at end of period
     let closingStock = 0
     for (const batch of closingInventoryRows) {
       closingStock += Number(batch.quantity_remaining ?? 0) * Number(batch.cost_price ?? 0)
@@ -372,15 +394,13 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
       wholesaleRevenue = 0,
       retailCogs = 0,
       wholesaleCogs = 0
-    
+
     // Calculate retail revenue and COGS
     for (const item of saleItemRows) {
       const sale = Array.isArray(item.sales) ? item.sales[0] : item.sales
       if (!sale || sale.status !== 'completed') continue
-      const lt = Number(item.line_total ?? 0)
-      const itemCogs = Number(item.cost_price ?? 0) * Number(item.quantity ?? 0)
-      retailRevenue += lt
-      retailCogs += itemCogs
+      retailRevenue += Number(item.line_total ?? 0)
+      retailCogs += Number(item.cost_price ?? 0) * Number(item.quantity ?? 0)
     }
 
     // Calculate wholesale revenue and COGS from wholesale_sales
@@ -398,11 +418,10 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
     const totalRevenue = retailRevenue + wholesaleRevenue
     const cogs = retailCogs + wholesaleCogs
     const grossProfit = totalRevenue - cogs
-
     const expenses = expRows.reduce((s: number, e: any) => s + Number(e.amount ?? 0), 0)
     const netProfit = grossProfit - expenses
 
-    // Calculate restock value from purchases received during this period
+    // ✅ Restock: calculate both stock value received AND cash paid out
     let restockStockValue = 0
     for (const purchase of restockRows) {
       const batches = Array.isArray(purchase.inventory_batches) 
@@ -412,22 +431,19 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
           : []
       
       for (const batch of batches) {
-        const qty = Number(batch.quantity_received ?? 0)
-        const costPrice = Number(batch.cost_price ?? 0)
-        restockStockValue += qty * costPrice
+        restockStockValue += Number(batch.quantity_received ?? 0) * Number(batch.cost_price ?? 0)
       }
     }
 
+    // ✅ Cash paid for restocking = same as stock value received at cost
+    const restockCash = restockStockValue
+
     const damagedLoss = damageRows.reduce((s: number, d: any) => s + Number(d.loss_amount ?? 0), 0)
 
-    // Calculate opening stock by working backwards to ensure inventory reconciliation
-    // Formula: Opening + Restocked - COGS - Damaged = Closing
-    // Therefore: Opening = Closing - Restocked + COGS + Damaged
-    const openingStock = closingStock - restockStockValue + cogs + damagedLoss
     const openingCapital = openingCash + openingStock
 
-    // Calculate closing cash and capital
-    const closingCash = openingCash + totalRevenue - expenses
+    // ✅ Closing cash accounts for restock cash outflow
+    const closingCash = openingCash + totalRevenue - expenses - restockCash
     const currentCapital = closingCash + closingStock
 
     return {
@@ -441,7 +457,7 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
       grossProfit,
       expenses,
       netProfit,
-      restockCash: 0,
+      restockCash,
       restockStockValue,
       damagedLoss,
       closingCash,
@@ -455,6 +471,7 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
       retailShare: totalRevenue ? (retailRevenue / totalRevenue) * 100 : 0,
       wholesaleShare: totalRevenue ? (wholesaleRevenue / totalRevenue) * 100 : 0,
       hasOpeningBalance,
+      openingBalanceDate,
     }
   } catch (error) {
     console.error('Error fetching accounting data:', error)
@@ -533,22 +550,59 @@ export default function AccountingPage() {
   const handleSaveOB = async (input: { cash: number; date: string }) => {
     setSaving(true)
     try {
-      const { error } = await supabase.from('accounting_opening_balance').insert({
-        business_id: businessId,
-        cash_amount: input.cash,
-        balance_date: input.date,
-      })
-      
-      if (error) {
-        console.error('Open balance insert error:', error)
-        if (error.code === 'PGRST301' || error.message?.includes('relation') || error.message?.includes('permission')) {
-          toast.error('Opening balance table not set up yet. Contact your admin or proceed without it.')
-        } else {
-          toast.error(error.message || 'Unable to save opening balance')
+      if (data?.hasOpeningBalance) {
+        // Update existing - unique constraint is on business_id only
+        const { error } = await supabase
+          .from('accounting_opening_balance')
+          .update({
+            cash_amount: input.cash,
+            balance_date: input.date,
+          })
+          .eq('business_id', businessId)
+        
+        if (error) {
+          console.error('Open balance update error:', error)
+          toast.error(error.message || 'Unable to update opening balance')
+          setShowModal(false)
+          return
         }
-        setShowModal(false)
-        setHasPromptedForOpeningBalance(true)
-        return
+      } else {
+        // Insert new
+        const { error } = await supabase.from('accounting_opening_balance').insert({
+          business_id: businessId,
+          cash_amount: input.cash,
+          balance_date: input.date,
+        })
+        
+        if (error) {
+          console.error('Open balance insert error:', error)
+          if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
+            // Record exists, update it instead
+            const { error: updateError } = await supabase
+              .from('accounting_opening_balance')
+              .update({
+                cash_amount: input.cash,
+                balance_date: input.date,
+              })
+              .eq('business_id', businessId)
+            
+            if (updateError) {
+              toast.error(updateError.message || 'Unable to save opening balance')
+              setShowModal(false)
+              return
+            }
+          } else if (error.code === 'PGRST301' || error.message?.includes('relation') || error.message?.includes('permission')) {
+            toast.error('Opening balance table not set up yet. Contact your admin or proceed without it.')
+            setShowModal(false)
+            setHasPromptedForOpeningBalance(true)
+            return
+          } else {
+            toast.error(error.message || 'Unable to save opening balance')
+            setShowModal(false)
+            setHasPromptedForOpeningBalance(true)
+            return
+          }
+        }
       }
       
       setShowModal(false)
@@ -581,7 +635,13 @@ export default function AccountingPage() {
   return (
     <div className="p-4 sm:p-6 space-y-5">
       {showModal && (
-        <OpeningBalanceModal onSave={handleSaveOB} onClose={() => setShowModal(false)} saving={saving} />
+        <OpeningBalanceModal 
+          onSave={handleSaveOB} 
+          onClose={() => setShowModal(false)} 
+          saving={saving}
+          initialCash={data?.openingCash}
+          initialDate={data?.openingBalanceDate}
+        />
       )}
 
       {/* Header */}
@@ -686,6 +746,34 @@ export default function AccountingPage() {
         </div>
       )}
 
+      {!loading && data && data.hasOpeningBalance && (
+        <button
+          onClick={() => setShowModal(true)}
+          className="w-full card p-4 bg-gradient-to-r from-emerald-50 to-emerald-100 dark:from-emerald-950/30 dark:to-emerald-900/30 border border-emerald-300 dark:border-emerald-700/50 hover:shadow-md transition-all text-left group"
+        >
+          <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1">
+            Opening Balance Set
+          </p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-baseline gap-3">
+              <span className="text-2xl font-bold font-mono text-emerald-900 dark:text-emerald-100">
+                {fmt(data.openingCash)}
+              </span>
+              <span className="text-sm text-emerald-700 dark:text-emerald-300">
+                at {new Date(data.openingBalanceDate + 'T00:00:00').toLocaleDateString('en-IN', {
+                  year: 'numeric',
+                  month: '2-digit',
+                  day: '2-digit',
+                })}
+              </span>
+            </div>
+            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 group-hover:translate-x-1 transition-transform">
+              Click to edit →
+            </span>
+          </div>
+        </button>
+      )}
+
       {!loading && data && (
         <>
           {/* Summary Cards */}
@@ -733,6 +821,7 @@ export default function AccountingPage() {
               <StatRow label="Opening cash" value={data.openingCash} colorKey="muted" />
               <StatRow label="(+) Sales collected" value={data.totalRevenue} colorKey="emerald" indent />
               <StatRow label="(−) Expenses paid" value={-data.expenses} colorKey="red" indent />
+              <StatRow label="(−) Restock payments" value={-data.restockCash} colorKey="red" indent />
               <StatRow label="Closing cash" value={data.closingCash} total />
               <div className="mt-3">
                 <Trend value={data.cashChange} />

@@ -434,4 +434,42 @@ export const purchasesApi = {
       }
     })
   },
+
+  async deleteRestock(purchaseId: string): Promise<void> {
+    const businessId = getBusinessId()
+    
+    // Fetch the purchase to get the batch ID
+    const { data: purchase, error: fetchError } = await supabase
+      .from('purchases')
+      .select('id, inventory_batches(id, quantity_received)')
+      .eq('id', purchaseId)
+      .eq('business_id', businessId)
+      .single()
+    
+    if (fetchError || !purchase) throw new Error('Purchase not found')
+    
+    // Delete the inventory batch first (if it exists)
+    const batch = Array.isArray(purchase.inventory_batches) 
+      ? purchase.inventory_batches[0] 
+      : purchase.inventory_batches
+    
+    if (batch) {
+      const { error: batchDeleteError } = await supabase
+        .from('inventory_batches')
+        .delete()
+        .eq('id', batch.id)
+        .eq('business_id', businessId)
+      
+      if (batchDeleteError) throw new Error(`Failed to delete inventory batch: ${batchDeleteError.message}`)
+    }
+    
+    // Delete the purchase record
+    const { error: purchaseDeleteError } = await supabase
+      .from('purchases')
+      .delete()
+      .eq('id', purchaseId)
+      .eq('business_id', businessId)
+    
+    if (purchaseDeleteError) throw new Error(`Failed to delete purchase: ${purchaseDeleteError.message}`)
+  },
 }
