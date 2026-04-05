@@ -132,7 +132,7 @@ export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailMod
 
         {/* Printable invoice — always shows only customer-facing info */}
         <div ref={invoiceRef} className="bg-white text-black rounded-xl p-5 font-mono text-xs leading-relaxed">
-          <div style={{ textAlign: 'center' }}>
+          <div style={{ textAlign: 'center', marginBottom: 8 }}>
             <div style={{ fontWeight: 'bold', fontSize: 16 }}>{user?.business_name || 'The Vape Square'}</div>
             <div style={{ fontSize: 11 }}>Point of Sale System</div>
             <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
@@ -144,76 +144,64 @@ export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailMod
             <span>Date:</span><span>{formatDateTime(sale.created_at)}</span>
           </div>
           <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
-          {items.map((item, i) => {
-            const listPrice  = item.unit_price * item.quantity
-            const hasDiscount = item.discount_amount > 0
+
+          {/* Items — show SN, product name, qty×price, list price total, discount */}
+          {items.map((item, idx) => {
+            const itemDiscount = item.discount_amount || 0
+            const listPrice    = item.unit_price * item.quantity
             return (
-              <div key={i} style={{ marginBottom: 4 }}>
-                <div style={{ fontWeight: 'bold' }}>{item.product_name}</div>
+              <div key={idx} style={{ marginBottom: 6 }}>
+                <div style={{ fontWeight: 'bold' }}>{idx + 1}. {item.product_name}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span>{item.quantity} × रु {item.unit_price}</span>
-                  <span style={{ textDecoration: hasDiscount ? 'line-through' : 'none', color: hasDiscount ? '#888' : 'inherit' }}>
-                    रु {listPrice.toFixed(0)}
-                  </span>
+                  <span>रु {listPrice.toFixed(0)}</span>
                 </div>
-                {hasDiscount && (
-                  <>
-                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                      <span>Discount</span><span>-रु {item.discount_amount.toFixed(0)}</span>
-                    </div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold' }}>
-                      <span>Final</span><span>रु {item.line_total.toFixed(0)}</span>
-                    </div>
-                  </>
+                {itemDiscount > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span>Discount</span>
+                    <span>-रु {itemDiscount.toFixed(0)}</span>
+                  </div>
                 )}
               </div>
             )
           })}
+
           <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-            <span>Subtotal:</span><span>रु {sale.subtotal.toFixed(0)}</span>
+            <span>List Price Total:</span><span>रु {sale.subtotal.toFixed(0)}</span>
           </div>
           {sale.discount_amount > 0 && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-              <span>Discount:</span><span>-रु {sale.discount_amount.toFixed(0)}</span>
-            </div>
-          )}
-          {sale.tax_amount > 0 && (
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-              <span>Tax ({sale.tax_rate}%):</span><span>रु {sale.tax_amount.toFixed(0)}</span>
+              <span>Total Discount:</span><span>-रु {sale.discount_amount.toFixed(0)}</span>
             </div>
           )}
           <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 'bold', fontSize: 14, marginBottom: 4 }}>
             <span>TOTAL:</span><span>रु {sale.total.toFixed(0)}</span>
           </div>
-          {sale.payment_method === 'cash' && (
-            <>
+          {sale.payment_method === 'cash' && (<>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+              <span>Cash:</span><span>रु {(sale.cash_amount||0).toFixed(0)}</span>
+            </div>
+            {(sale.change_amount||0) > 0 && (
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                <span>Cash Paid:</span><span>रु {sale.cash_amount.toFixed(0)}</span>
+                <span>Change:</span><span>रु {(sale.change_amount||0).toFixed(0)}</span>
               </div>
-              {(sale.change_amount || 0) > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                  <span>Change:</span><span>रु {sale.change_amount.toFixed(0)}</span>
-                </div>
-              )}
-            </>
-          )}
+            )}
+          </>)}
           {sale.payment_method === 'online' && (
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-              <span>Online Paid:</span><span>रु {sale.online_amount.toFixed(0)}</span>
+              <span>Online:</span><span>रु {(sale.online_amount||0).toFixed(0)}</span>
             </div>
           )}
-          {sale.payment_method === 'split' && (
-            <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                <span>Cash:</span><span>रु {sale.cash_amount.toFixed(0)}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
-                <span>Online:</span><span>रु {sale.online_amount.toFixed(0)}</span>
-              </div>
-            </>
-          )}
+          {sale.payment_method === 'split' && (<>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+              <span>Cash:</span><span>रु {(sale.cash_amount||0).toFixed(0)}</span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+              <span>Online:</span><span>रु {(sale.online_amount||0).toFixed(0)}</span>
+            </div>
+          </>)}
           <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
           <div style={{ textAlign: 'center', fontSize: 11 }}>Thank you for shopping!</div>
         </div>
