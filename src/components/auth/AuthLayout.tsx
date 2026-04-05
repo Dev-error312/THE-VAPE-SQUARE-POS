@@ -1,21 +1,35 @@
-import { ReactNode } from 'react'
+import { ReactNode, useMemo } from 'react'
 
 // ─── Animated background particles ───────────────────────────────────────────
 function Particles() {
+  // Generate particles once and memoize them to prevent animation resets
+  const particles = useMemo(() => {
+    return Array.from({ length: 18 }).map((_, i) => ({
+      id: i,
+      left: Math.random() * 100,
+      top: Math.random() * 100,
+      animationDelay: Math.random() * 6,
+      animationDuration: 6 + Math.random() * 8,
+      width: 2 + Math.random() * 3,
+      height: 2 + Math.random() * 3,
+      opacity: 0.15 + Math.random() * 0.3,
+    }))
+  }, [])
+
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      {Array.from({ length: 18 }).map((_, i) => (
+      {particles.map((particle) => (
         <span
-          key={i}
+          key={particle.id}
           className="particle"
           style={{
-            left: `${Math.random() * 100}%`,
-            top: `${Math.random() * 100}%`,
-            animationDelay: `${Math.random() * 6}s`,
-            animationDuration: `${6 + Math.random() * 8}s`,
-            width: `${2 + Math.random() * 3}px`,
-            height: `${2 + Math.random() * 3}px`,
-            opacity: 0.15 + Math.random() * 0.3,
+            left: `${particle.left}%`,
+            top: `${particle.top}%`,
+            animationDelay: `${particle.animationDelay}s`,
+            animationDuration: `${particle.animationDuration}s`,
+            width: `${particle.width}px`,
+            height: `${particle.height}px`,
+            opacity: particle.opacity,
           }}
         />
       ))}
