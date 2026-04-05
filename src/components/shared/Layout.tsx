@@ -2,7 +2,8 @@ import { NavLink, useNavigate, Link } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, Package, BarChart3,
   LogOut, ShoppingBag, Menu, X, ChevronRight,
-  TrendingUp, DollarSign, CreditCard, Store, Users, Calculator
+  TrendingUp, DollarSign, CreditCard, Store, Users, Calculator,
+  HelpCircle, BookOpen, Sparkles, Settings
 } from 'lucide-react'
 import { useState } from 'react'
 import Footer from './Footer'
@@ -11,7 +12,7 @@ import { useAuthStore } from '../../store/authStore'
 import { useIsAdmin } from '../../hooks/useRole'
 import toast from 'react-hot-toast'
 
-const ALL_NAV = [
+const MAIN_NAV = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard',     adminOnly: false },
   { to: '/pos',       icon: ShoppingCart,    label: 'Point of Sale', adminOnly: false },
   { to: '/inventory', icon: Package,          label: 'Inventory',    adminOnly: false },
@@ -24,13 +25,21 @@ const ALL_NAV = [
   { to: '/credits',   icon: CreditCard,       label: 'Credits',      adminOnly: true  },
 ]
 
+const OTHERS_NAV = [
+  { to: '/help',      icon: HelpCircle,  label: 'Help & Support', adminOnly: false },
+  { to: '/tutorials', icon: BookOpen,    label: 'Tutorials',      adminOnly: false },
+  { to: '/whats-new', icon: Sparkles,    label: "What's New",     adminOnly: false },
+  { to: '/settings',  icon: Settings,    label: 'Settings',       adminOnly: false },
+]
+
 export default function Layout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { user, signOut } = useAuthStore()
   const navigate = useNavigate()
   const isAdmin = useIsAdmin()
 
-  const navItems = ALL_NAV.filter(item => !item.adminOnly || isAdmin)
+  const mainNavItems = MAIN_NAV.filter(item => !item.adminOnly || isAdmin)
+  const othersNavItems = OTHERS_NAV.filter(item => !item.adminOnly || isAdmin)
 
   const handleSignOut = async () => {
     await signOut()
@@ -50,7 +59,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
         transform transition-transform duration-200
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-200 dark:border-slate-800">
+        {/* Header */}
+        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-200 dark:border-slate-800 flex-shrink-0">
           <div className="w-9 h-9 bg-primary-600 rounded-xl flex items-center justify-center flex-shrink-0">
             <ShoppingBag className="w-4 h-4 text-white" />
           </div>
@@ -63,8 +73,9 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           </button>
         </div>
 
+        {/* Main Navigation — Scrollable */}
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-          {navItems.map(({ to, icon: Icon, label }) => (
+          {mainNavItems.map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} onClick={() => setSidebarOpen(false)}
               className={({ isActive }) => `
                 flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium
@@ -85,8 +96,38 @@ export default function Layout({ children }: { children: React.ReactNode }) {
           ))}
         </nav>
 
-        <div className="px-3 py-4 border-t border-slate-200 dark:border-slate-800">
-          <Link to="/profile" className="flex items-center gap-3 px-3 py-2 mb-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 transition-colors">
+        {/* Others Section — Stuck at bottom, NOT scrollable */}
+        {othersNavItems.length > 0 && (
+          <div className="border-t border-slate-200 dark:border-slate-800 flex-shrink-0">
+            <div className="px-4 py-3">
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">Others</p>
+            </div>
+            <nav className="px-3 pb-3 space-y-0.5">
+              {othersNavItems.map(({ to, icon: Icon, label }) => (
+                <NavLink key={to} to={to} onClick={() => setSidebarOpen(false)}
+                  className={({ isActive }) => `
+                    flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-150
+                    ${isActive
+                      ? 'bg-primary-600 text-white shadow-lg shadow-primary-900/50'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200 dark:hover:bg-slate-800'
+                    }
+                  `}>
+                  {({ isActive }) => (
+                    <>
+                      <Icon className="w-4 h-4 flex-shrink-0" />
+                      <span className="flex-1">{label}</span>
+                      {isActive && <ChevronRight className="w-3 h-3 opacity-60" />}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </nav>
+          </div>
+        )}
+
+        {/* User Section — Stuck at bottom */}
+        <div className="border-t border-slate-200 dark:border-slate-800 px-3 py-4 flex-shrink-0 space-y-3">
+          <Link to="/profile" className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/50 transition-colors">
             <div className="w-8 h-8 bg-primary-700 rounded-full flex items-center justify-center flex-shrink-0">
               <span className="text-xs font-bold text-primary-200">
                 {user?.full_name?.charAt(0).toUpperCase() || user?.email?.charAt(0).toUpperCase() || 'U'}
@@ -100,9 +141,8 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </Link>
           {/* Theme toggle */}
-          <div className="px-1 mb-1.5">
-            <ThemeToggle />
-          </div>
+          <ThemeToggle />
+          {/* Sign out button */}
           <button onClick={handleSignOut}
             className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all">
             <LogOut className="w-4 h-4" /> Sign Out

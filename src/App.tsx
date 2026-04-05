@@ -19,6 +19,11 @@ import CreditsPage from './components/credits/CreditsPage'
 import WholesalePage from './components/wholesale/WholesalePage'
 import ProfilePage from './components/profile/ProfilePage'
 import EmployeesPage from './components/employees/EmployeesPage'
+import HelpSupportPage from './components/others/HelpSupportPage'
+import TutorialsPage from './components/others/TutorialsPage'
+import WhatsNewPage from './components/others/WhatsNewPage'
+import SettingsPage from './components/others/SettingsPage'
+import UpdatesAdminPage from './components/admin/UpdatesAdminPage'
 
 export default function App() {
   const initialize = useAuthStore(s => s.initialize)
@@ -72,6 +77,13 @@ export default function App() {
         <Route path="/analytics" element={adminWrap(<AnalyticsPage />)} />
         <Route path="/credits"   element={adminWrap(<CreditsPage />)} />
         <Route path="/employees" element={adminWrap(<EmployeesPage />)} />
+        {/* Others section */}
+        <Route path="/help"      element={wrap(<HelpSupportPage />)} />
+        <Route path="/tutorials" element={wrap(<TutorialsPage />)} />
+        <Route path="/whats-new" element={wrap(<WhatsNewPage />)} />
+        <Route path="/settings"  element={wrap(<SettingsPage />)} />
+        {/* Admin: Update Management */}
+        <Route path="/admin/updates" element={adminWrap(<UpdatesAdminPage />)} />
         <Route path="*"          element={<Navigate to="/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
