@@ -125,7 +125,7 @@ export const updatesApi = {
       const { data: userData, error: userError } = await supabase
         .from('user_profiles')
         .select('last_seen_update_id')
-        .eq('id', user.id)
+        .eq('auth_user_id', user.id)
         .single()
 
       if (userError && userError.code !== 'PGRST116') return false
@@ -183,7 +183,7 @@ export const updatesApi = {
       await supabase
         .from('user_profiles')
         .update({ last_seen_update_id: mostRecent.id })
-        .eq('id', user.id)
+        .eq('auth_user_id', user.id)
     } catch {
       console.warn('Could not mark updates as seen')
     }

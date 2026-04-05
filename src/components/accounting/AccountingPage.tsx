@@ -207,7 +207,9 @@ function OpeningBalanceModal({
   saving: boolean
 }) {
   const [cash, setCash] = useState('')
-  const [date, setDate] = useState('2026-03-26')
+  // Get today's date in YYYY-MM-DD format
+  const today = new Date().toISOString().split('T')[0]
+  const [date, setDate] = useState(today)
 
   return (
     <Modal isOpen={true} onClose={onClose} title="Set Opening Balance">
