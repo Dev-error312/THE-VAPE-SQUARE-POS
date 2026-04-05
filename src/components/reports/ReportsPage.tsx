@@ -165,8 +165,8 @@ export default function ReportsPage() {
       await salesApi.deleteSale(target.id)
       setSales(prev => prev.filter(s => s.id !== target.id))
       toast.success('Transaction deleted and stock restored')
-      // ✅ Don't call triggerSales() — optimistic local-state removal is sufficient
-      // The row is permanently gone from the UI now
+      // ✅ Trigger refresh to sync dashboard and other pages
+      useRefreshStore.getState().triggerSales()
     } catch (e: unknown) {
       // On error, the row will stay (no filter applied), which is correct
       toast.error(e instanceof Error ? e.message : 'Failed to delete transaction')
