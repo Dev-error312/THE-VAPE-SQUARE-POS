@@ -106,7 +106,20 @@ export default function CheckoutModal({ isOpen, onClose, onComplete }: CheckoutM
       setStep('invoice')
       toast.success(isBackdated ? 'Backdated sale recorded!' : 'Sale completed!')
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to process sale'
+      let msg = 'Failed to process sale'
+      
+      if (err instanceof Error) {
+        msg = err.message
+        // Provide friendly hints for common errors
+        if (msg.includes('Load Failed') || msg.includes('Network')) {
+          msg = 'Network connection issue. The system will retry automatically. Please wait...'
+        } else if (msg.includes('Insufficient stock')) {
+          msg = `${msg} — Please reduce quantity and try again.`
+        } else if (msg.includes('stock available')) {
+          msg = `${msg} — Update inventory and try again.`
+        }
+      }
+      
       console.error('[Checkout]', err)
       toast.error(msg)
     } finally {

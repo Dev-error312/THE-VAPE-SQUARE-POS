@@ -15,6 +15,34 @@ function generateSaleNumber(): string {
   return `INV-${date}-${rand}`
 }
 
+// ─── Retry Logic for Network Failures ───────────────────────────────────────
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  label: string,
+  maxRetries = 3
+): Promise<T> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      const isNetworkError = 
+        (err as any)?.message?.includes?.('Load Failed') ||
+        (err as any)?.message?.includes?.('fetch failed') ||
+        (err as any)?.message?.includes?.('Network') ||
+        (err as any)?.status === 0 ||
+        (err as any)?.status === 408 ||
+        (err as any)?.status === 504
+      
+      if (!isNetworkError || attempt === maxRetries) throw err
+      
+      const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000)
+      console.warn(`[${label}] Attempt ${attempt} failed, retrying in ${delay}ms...`, err)
+      await new Promise(resolve => setTimeout(resolve, delay))
+    }
+  }
+  throw new Error('Retry failed')
+}
+
 // ─── Error Handler for Refresh Token Failures ──────────────────────────────
 async function handleRefreshTokenError(error: unknown): Promise<never> {
   if (isRefreshTokenExpired(error)) {
@@ -48,33 +76,46 @@ export const salesApi = {
 
     const saleNumber = generateSaleNumber()
 
-    const { data: sale, error: saleError } = await supabase
-      .from('sales')
-      .insert({
-        sale_number: saleNumber,
-        business_id: businessId,
-        subtotal: params.subtotal,
-        discount_type: params.discountType,
-        discount_value: params.discountValue,
-        discount_amount: params.discountAmount,
-        tax_rate: params.taxRate,
-        tax_amount: params.taxAmount,
-        total: params.total,
-        payment_method: params.paymentMethod,
-        cash_amount: params.cashAmount,
-        online_amount: params.onlineAmount,
-        change_amount: params.changeAmount,
-        status: 'completed',
-        created_by: params.userId,
-        // If backdated, override created_at
-        ...(params.saleDate ? { created_at: params.saleDate } : {}),
-      })
-      .select().single()
+    // ─── Step 1: Create Sale Record (with retry) ────────────────────
+    let sale: Sale
+    try {
+      sale = await withRetry(
+        async () => {
+          const { data, error } = await supabase
+            .from('sales')
+            .insert({
+              sale_number: saleNumber,
+              business_id: businessId,
+              subtotal: params.subtotal,
+              discount_type: params.discountType,
+              discount_value: params.discountValue,
+              discount_amount: params.discountAmount,
+              tax_rate: params.taxRate,
+              tax_amount: params.taxAmount,
+              total: params.total,
+              payment_method: params.paymentMethod,
+              cash_amount: params.cashAmount,
+              online_amount: params.onlineAmount,
+              change_amount: params.changeAmount,
+              status: 'completed',
+              created_by: params.userId,
+              ...(params.saleDate ? { created_at: params.saleDate } : {}),
+            })
+            .select()
+            .single()
 
-    if (saleError || !sale) {
-      if (isRefreshTokenExpired(saleError)) await handleRefreshTokenError(saleError)
-      console.error('[salesApi] Sale insert error:', saleError)
-      throw new Error(`Failed to create sale: ${saleError?.message ?? 'Unknown error'}`)
+          if (error || !data) {
+            if (isRefreshTokenExpired(error)) await handleRefreshTokenError(error)
+            throw new Error(`Database error: ${error?.message || 'Unknown'}`)
+          }
+          return data
+        },
+        'createSale',
+        3
+      )
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      throw new Error(`Failed to create sale: ${msg}`)
     }
 
     const saleItemsToInsert: {
@@ -90,60 +131,104 @@ export const salesApi = {
     )
     const cartDiscountRatio = grossSubtotal > 0 ? params.discountAmount / grossSubtotal : 0
 
-    for (const cartItem of params.items) {
-      let resolvedCostPrice = cartItem.cost_price
-      let resolvedBatchId: string | null = null
-      let qtyToDeduct = cartItem.quantity
+    // ─── Step 2: Process Inventory for Each Item (with retry) ───────
+    try {
+      for (const cartItem of params.items) {
+        let resolvedCostPrice = cartItem.cost_price
+        let resolvedBatchId: string | null = null
+        let qtyToDeduct = cartItem.quantity
 
-      const { data: batches, error: batchError } = await supabase
-        .from('inventory_batches')
-        .select('id, quantity_remaining, cost_price')
-        .eq('product_id', cartItem.product.id)
-        .eq('business_id', businessId)
-        .gt('quantity_remaining', 0)
-        .order('received_at', { ascending: true })
+        // Fetch batches with retry
+        const batches = await withRetry(
+          async () => {
+            const { data, error } = await supabase
+              .from('inventory_batches')
+              .select('id, quantity_remaining, cost_price')
+              .eq('product_id', cartItem.product.id)
+              .eq('business_id', businessId)
+              .gt('quantity_remaining', 0)
+              .order('received_at', { ascending: true })
 
-      if (batchError) throw new Error(`Failed to fetch stock for ${cartItem.product.name}: ${batchError.message}`)
-      if (!batches || batches.length === 0) throw new Error(`No stock available for "${cartItem.product.name}"`)
+            if (error || !data) {
+              throw new Error(`Failed to fetch stock: ${error?.message || 'Unknown'}`)
+            }
+            return data
+          },
+          `fetchBatches[${cartItem.product.name}]`,
+          3
+        )
 
-      for (const batch of batches) {
-        if (qtyToDeduct <= 0) break
-        const deduct = Math.min(qtyToDeduct, batch.quantity_remaining)
-        const { error: updateError } = await supabase
-          .from('inventory_batches')
-          .update({ quantity_remaining: batch.quantity_remaining - deduct })
-          .eq('id', batch.id)
-          .eq('business_id', businessId)
-        if (updateError) throw new Error(`Failed to deduct stock for "${cartItem.product.name}": ${updateError.message}`)
-        qtyToDeduct -= deduct
-        resolvedCostPrice = batch.cost_price
-        resolvedBatchId = batch.id
+        if (!batches || batches.length === 0) {
+          throw new Error(`No stock available for "${cartItem.product.name}"`)
+        }
+
+        // Update inventory batches
+        for (const batch of batches) {
+          if (qtyToDeduct <= 0) break
+          const deduct = Math.min(qtyToDeduct, batch.quantity_remaining)
+
+          await withRetry(
+            async () => {
+              const { error } = await supabase
+                .from('inventory_batches')
+                .update({ quantity_remaining: batch.quantity_remaining - deduct })
+                .eq('id', batch.id)
+                .eq('business_id', businessId)
+
+              if (error) throw new Error(`Update failed: ${error.message}`)
+            },
+            `updateBatch[${cartItem.product.name}]`,
+            3
+          )
+
+          qtyToDeduct -= deduct
+          resolvedCostPrice = batch.cost_price
+          resolvedBatchId = batch.id
+        }
+
+        if (qtyToDeduct > 0) {
+          throw new Error(`Insufficient stock for "${cartItem.product.name}" (need ${qtyToDeduct} more)`)
+        }
+
+        // Proportional discount for this item
+        const itemGross = cartItem.unit_price * cartItem.quantity
+        const itemDiscount = round2(itemGross * cartDiscountRatio)
+        const lineTotal = round2(itemGross - itemDiscount)
+
+        saleItemsToInsert.push({
+          sale_id: sale.id,
+          product_id: cartItem.product.id,
+          batch_id: resolvedBatchId,
+          product_name: cartItem.product.name,
+          quantity: cartItem.quantity,
+          cost_price: resolvedCostPrice,
+          unit_price: cartItem.unit_price,
+          discount_amount: itemDiscount,
+          line_total: lineTotal,
+          business_id: businessId,
+        })
       }
-
-      if (qtyToDeduct > 0) throw new Error(`Insufficient stock for "${cartItem.product.name}"`)
-
-      // Proportional discount for this item
-      const itemGross = cartItem.unit_price * cartItem.quantity
-      const itemDiscount = round2(itemGross * cartDiscountRatio)
-      const lineTotal = round2(itemGross - itemDiscount)
-
-      saleItemsToInsert.push({
-        sale_id: sale.id,
-        product_id: cartItem.product.id,
-        batch_id: resolvedBatchId,
-        product_name: cartItem.product.name,
-        quantity: cartItem.quantity,
-        cost_price: resolvedCostPrice,
-        unit_price: cartItem.unit_price,
-        discount_amount: itemDiscount,
-        line_total: lineTotal,
-        business_id: businessId,
-      })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      throw new Error(`Inventory processing failed: ${msg}`)
     }
 
-    const { error: itemsError } = await supabase.from('sale_items').insert(saleItemsToInsert)
-    if (itemsError) throw new Error(`Failed to save sale items: ${itemsError.message}`)
+    // ─── Step 3: Insert Sale Items (with retry) ────────────────────
+    try {
+      await withRetry(
+        async () => {
+          const { error } = await supabase.from('sale_items').insert(saleItemsToInsert)
+          if (error) throw new Error(`Database error: ${error.message}`)
+        },
+        'insertSaleItems',
+        3
+      )
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      throw new Error(`Failed to save sale items: ${msg}`)
+    }
 
+    // ─── Step 4: Record Payment (with retry) ──────────────────────
     const paymentsToInsert: { sale_id: string; method: 'cash' | 'online'; amount: number; business_id: string }[] = []
     if (params.paymentMethod === 'cash') paymentsToInsert.push({ sale_id: sale.id, method: 'cash', amount: params.cashAmount, business_id: businessId })
     else if (params.paymentMethod === 'online') paymentsToInsert.push({ sale_id: sale.id, method: 'online', amount: params.onlineAmount, business_id: businessId })
@@ -151,9 +236,21 @@ export const salesApi = {
       if (params.cashAmount > 0) paymentsToInsert.push({ sale_id: sale.id, method: 'cash', amount: params.cashAmount, business_id: businessId })
       if (params.onlineAmount > 0) paymentsToInsert.push({ sale_id: sale.id, method: 'online', amount: params.onlineAmount, business_id: businessId })
     }
+
     if (paymentsToInsert.length > 0) {
-      const { error: paymentError } = await supabase.from('payments').insert(paymentsToInsert)
-      if (paymentError) throw new Error(`Failed to record payment: ${paymentError.message}`)
+      try {
+        await withRetry(
+          async () => {
+            const { error } = await supabase.from('payments').insert(paymentsToInsert)
+            if (error) throw new Error(`Database error: ${error.message}`)
+          },
+          'insertPayment',
+          3
+        )
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Unknown error'
+        throw new Error(`Failed to record payment: ${msg}`)
+      }
     }
 
     return sale as Sale
