@@ -229,9 +229,11 @@ export default function DashboardPage() {
               </tr>
             </thead>
             <tbody>
-              {recentSales.length === 0 ? (
+              {(recentSales.filter(s => (s.sale_items || []).length > 0)).length === 0 ? (
                 <tr><td colSpan={7} className="text-center py-10 text-slate-500 text-sm">No sales yet</td></tr>
-              ) : recentSales.map(sale => {
+              ) : recentSales
+                  .filter(s => (s.sale_items || []).length > 0)  // Only show sales with items (filters out deleted/incomplete sales)
+                  .map(sale => {
                 const { label, qty } = summariseItems(sale)
                 return (
                   <tr key={sale.id} className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">

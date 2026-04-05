@@ -134,16 +134,57 @@ export default function ReportsPage() {
     [sales, searchInvoice],
   )
 
-  const totalRevenue = useMemo(() => sales.reduce((s, sale) => s + sale.total, 0), [sales])
+  const totalRevenue = useMemo(() => 
+    sales
+      .filter(s => (s.sale_items || []).length > 0)  // Only count complete sales
+      .reduce((s, sale) => s + sale.total, 0), 
+    [sales]
+  )
   const totalProfit  = useMemo(() =>
-    sales.reduce((sum, sale) =>
-      sum + (sale.sale_items || []).reduce(
-        (p, item) => p + (item.line_total - item.cost_price * item.quantity), 0,
-      ), 0),
+    sales
+      .filter(s => (s.sale_items || []).length > 0)  // Only count complete sales
+      .reduce((sum, sale) =>
+        sum + (sale.sale_items || []).reduce(
+          (p, item) => p + (item.line_total - item.cost_price * item.quantity), 0,
+        ), 0),
     [sales],
   )
   const totalCost = totalRevenue - totalProfit
   const margin    = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
+
+  // ✅ Recalculate payment totals from complete sales only
+  const calculatedPaymentTotals = useMemo(() => {
+    const completeSales = sales.filter(s => (s.sale_items || []).length > 0)
+    return {
+      cash: completeSales
+        .filter(s => s.payment_method === 'cash')
+        .reduce((sum, s) => sum + (s.cash_amount || 0), 0),
+      online: completeSales
+        .filter(s => s.payment_method === 'online')
+        .reduce((sum, s) => sum + (s.online_amount || 0), 0),
+    }
+  }, [sales])
+
+  // ✅ Recalculate chart data from complete sales only
+  const calculatedChartData = useMemo(() => {
+    const completeSales = sales.filter(s => (s.sale_items || []).length > 0)
+    const grouped: Record<string, { revenue: number; profit: number }> = {}
+    
+    for (const sale of completeSales) {
+      const date = new Date(sale.created_at).toLocaleDateString('en-CA')
+      if (!grouped[date]) grouped[date] = { revenue: 0, profit: 0 }
+      grouped[date].revenue += sale.total || 0
+      for (const item of (sale.sale_items || []) as { cost_price: number; quantity: number; line_total: number }[]) {
+        grouped[date].profit += item.line_total - item.cost_price * item.quantity
+      }
+    }
+    
+    return Object.entries(grouped).map(([date, stats]) => ({ 
+      date: formatDate(date), 
+      revenue: stats.revenue, 
+      profit: stats.profit 
+    }))
+  }, [sales])
 
   // ─────────────────────────────────────────────────────────────────────────
   // DERIVED — RESTOCKS
@@ -409,7 +450,7 @@ export default function ReportsPage() {
                   adminOnly: true,
                 },
                 {
-                  label: 'Transactions', value: sales.length,
+                  label: 'Transactions', value: sales.filter(s => (s.sale_items || []).length > 0).length,
                   icon: ShoppingBag, color: 'text-violet-400', bg: 'bg-violet-500/10',
                   sub: isAdmin ? `${margin.toFixed(1)}% margin` : undefined,
                   adminOnly: false,
@@ -444,7 +485,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-lg font-bold text-emerald-400 font-mono leading-none truncate">
-                    {formatCurrency(paymentTotals.cash)}
+                    {formatCurrency(calculatedPaymentTotals.cash)}
                   </p>
                   <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-0.5">Cash Collected</p>
                   <p className="text-xs text-slate-500 hidden sm:block">Includes split cash portions</p>
@@ -457,7 +498,7 @@ export default function ReportsPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-lg font-bold text-blue-400 font-mono leading-none truncate">
-                    {formatCurrency(paymentTotals.online)}
+                    {formatCurrency(calculatedPaymentTotals.online)}
                   </p>
                   <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mt-0.5">Online Collected</p>
                   <p className="text-xs text-slate-500 hidden sm:block">eSewa, Khalti, bank transfer</p>
@@ -466,13 +507,13 @@ export default function ReportsPage() {
             </div>
 
             {/* ── Bar chart ────────────────────────────────────────────── */}
-            {chartData.length > 0 && (
+            {calculatedChartData.length > 0 && (
               <div className="card p-5">
                 <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">
                   Daily Revenue{isAdmin ? ' & Profit' : ''}
                 </h2>
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
+                  <BarChart data={calculatedChartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
                     <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
                     <YAxis
                       tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false}

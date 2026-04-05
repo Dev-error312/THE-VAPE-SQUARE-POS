@@ -266,12 +266,15 @@ export const salesApi = {
 
     const [todaySalesRes, monthlySalesRes, productsRes] = await Promise.all([
       supabase.from('sales').select('total, sale_items(quantity, cost_price, unit_price, discount_amount)').eq('status', 'completed').eq('business_id', businessId).gte('created_at', todayStr),
-      supabase.from('sales').select('total').eq('status', 'completed').eq('business_id', businessId).gte('created_at', monthStart),
+      supabase.from('sales').select('total, sale_items(quantity, cost_price, unit_price, discount_amount)').eq('status', 'completed').eq('business_id', businessId).gte('created_at', monthStart),
       // Fetch selling_price + batch cost for stock valuation
       supabase.from('products').select('id, selling_price, inventory_batches(quantity_remaining, cost_price)').eq('is_active', true).eq('business_id', businessId),
     ])
 
-    const todaySales = todaySalesRes.data || []
+    // ✅ Filter out orphaned sales (those with no sale_items)
+    const todaySales = (todaySalesRes.data || []).filter(s => (s.sale_items || []).length > 0)
+    const monthlySales = (monthlySalesRes.data || []).filter(s => (s.sale_items || []).length > 0)
+    
     const todayRevenue = todaySales.reduce((s, sale) => s + (sale.total || 0), 0)
     const todayProfit = todaySales.reduce((s, sale) => {
       return s + ((sale.sale_items || []) as { unit_price: number; cost_price: number; quantity: number; discount_amount: number }[])
@@ -302,8 +305,8 @@ export const salesApi = {
       today_profit: round2(todayProfit),
       total_products: (productsRes.data || []).length,
       low_stock_count: lowStockCount,
-      monthly_revenue: round2((monthlySalesRes.data || []).reduce((s, sale) => s + (sale.total || 0), 0)),
-      monthly_sales: (monthlySalesRes.data || []).length,
+      monthly_revenue: round2(monthlySales.reduce((s, sale) => s + (sale.total || 0), 0)),
+      monthly_sales: monthlySales.length,
       total_stock_value: round2(totalStockValue),
       potential_selling_value: round2(potentialSellingValue),
       potential_profit: round2(potentialSellingValue - totalStockValue),
@@ -321,7 +324,10 @@ export const salesApi = {
 
     const grouped: Record<string, { revenue: number; gross_profit: number; sales: number; expenses: number; damages: number }> = {}
 
-    for (const sale of salesRes.data || []) {
+    // ✅ Filter out orphaned sales (those with no sale_items)
+    const completeSales = (salesRes.data || []).filter(s => (s.sale_items || []).length > 0)
+
+    for (const sale of completeSales) {
       // FIX: use local date string to avoid UTC→local timezone shift (e.g. Nepal UTC+5:45)
       const date = new Date(sale.created_at).toLocaleDateString('en-CA') // 'en-CA' gives YYYY-MM-DD
       if (!grouped[date]) grouped[date] = { revenue: 0, gross_profit: 0, sales: 0, expenses: 0, damages: 0 }
@@ -360,13 +366,14 @@ export const salesApi = {
     const businessId = getBusinessId()
     const { data, error } = await supabase
       .from('sales')
-      .select('cash_amount, online_amount')
+      .select('cash_amount, online_amount, sale_items(id)')
       .eq('status', 'completed')
       .eq('business_id', businessId)
       .gte('created_at', startDate)
       .lte('created_at', endDate)
     if (error) return { cash: 0, online: 0 }
-    const rows = data || []
+    // ✅ Filter out orphaned sales (those with no sale_items)
+    const rows = (data || []).filter(r => (r.sale_items || []).length > 0)
     return {
       cash:   round2(rows.reduce((s, r) => s + (r.cash_amount || 0), 0)),
       online: round2(rows.reduce((s, r) => s + (r.online_amount || 0), 0)),
@@ -381,7 +388,11 @@ export const salesApi = {
     if (error) throw new Error(`Failed to fetch sales report: ${error.message}`)
 
     const grouped: Record<string, { revenue: number; profit: number; cost: number; sales: number }> = {}
-    for (const sale of data || []) {
+    
+    // ✅ Filter out orphaned sales (those with no sale_items)
+    const completeSales = (data || []).filter(s => (s.sale_items || []).length > 0)
+    
+    for (const sale of completeSales) {
       // FIX: use local date string to avoid UTC→local timezone shift (e.g. Nepal UTC+5:45)
       const date = new Date(sale.created_at).toLocaleDateString('en-CA') // 'en-CA' gives YYYY-MM-DD
       if (!grouped[date]) grouped[date] = { revenue: 0, profit: 0, cost: 0, sales: 0 }
