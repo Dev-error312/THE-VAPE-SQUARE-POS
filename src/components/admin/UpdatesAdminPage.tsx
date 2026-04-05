@@ -1,8 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { AlertCircle, CheckCircle, Loader, Trash2 } from 'lucide-react'
+import { AlertCircle, CheckCircle, Loader, Trash2, Lock } from 'lucide-react'
 import { updatesApi, type Update } from '../../lib/updatesApi'
+import { useAuthStore } from '../../store/authStore'
+
+const ADMIN_EMAIL = 'suyogadhiakri@gmail.com'
 
 export function UpdatesAdminPage() {
+  const user = useAuthStore((state) => state.user)
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [version, setVersion] = useState<string>('1.0.0')
@@ -13,6 +17,32 @@ export function UpdatesAdminPage() {
   const [updates, setUpdates] = useState<Update[]>([])
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
+
+  // Check authorization
+  const isAuthorized = user?.email === ADMIN_EMAIL
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-slate-900 rounded-lg shadow-lg p-8 text-center">
+          <div className="flex justify-center mb-4">
+            <div className="p-3 bg-red-100 dark:bg-red-900/30 rounded-full">
+              <Lock className="w-8 h-8 text-red-600 dark:text-red-400" />
+            </div>
+          </div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">
+            Access Denied
+          </h1>
+          <p className="text-slate-600 dark:text-slate-400 mb-4">
+            This page is restricted to authorized administrators only.
+          </p>
+          <p className="text-sm text-slate-500 dark:text-slate-500">
+            Current email: <span className="font-semibold">{user?.email || 'Not authenticated'}</span>
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   useEffect(() => {
     loadNextVersion()
