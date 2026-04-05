@@ -204,17 +204,18 @@ function OpeningBalanceModal({
   saving,
   initialCash,
   initialDate,
+  defaultDate,
 }: {
   onSave: (data: { cash: number; date: string }) => Promise<void>
   onClose: () => void
   saving: boolean
   initialCash?: number
   initialDate?: string
+  defaultDate?: string
 }) {
   const [cash, setCash] = useState(initialCash ? String(initialCash) : '')
-  // Get today's date in YYYY-MM-DD format
-  const today = new Date().toISOString().split('T')[0]
-  const [date, setDate] = useState(initialDate || today)
+  // Default to period start date (when opening balance becomes effective), not today
+  const [date, setDate] = useState(initialDate || defaultDate || new Date().toISOString().split('T')[0])
 
   return (
     <Modal isOpen={true} onClose={onClose} title={initialCash ? "Edit Opening Balance" : "Set Opening Balance"}>
@@ -297,7 +298,7 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
       }
     }
 
-    const [saleItemRows, expRows, closingInventoryRows, openingInventoryRows, damageRows, restockRows, wholesaleRows] = await Promise.all([
+    const [saleItemRows, expRows, closingInventoryRows, damageRows, restockRows, wholesaleRows] = await Promise.all([
       execQuery(() =>
         supabase
           .from('sale_items')
@@ -315,21 +316,13 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
           .gte('expense_date', from)
           .lte('expense_date', to)
       ),
-      // Closing stock: all batches received ON OR BEFORE end date
+      // Closing stock: current quantity_remaining × cost_price for ALL batches
+      // (quantity_remaining is already the current truth; no date filter needed)
       execQuery(() =>
         supabase
           .from('inventory_batches')
           .select('cost_price,quantity_remaining')
           .eq('business_id', businessId)
-          .lte('received_at', `${to}T23:59:59.999Z`)
-      ),
-      // Opening stock: all batches received STRICTLY BEFORE start date
-      execQuery(() =>
-        supabase
-          .from('inventory_batches')
-          .select('cost_price,quantity_remaining')
-          .eq('business_id', businessId)
-          .lt('received_at', `${from}T00:00:00.000Z`)
       ),
       execQuery(() =>
         supabase
@@ -366,7 +359,7 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
         .from('accounting_opening_balance')
         .select('cash_amount,balance_date')
         .eq('business_id', businessId)
-        .lte('balance_date', from)
+        .lte('balance_date', to)
         .order('balance_date', { ascending: false })
         .limit(1)
       if (obRows?.[0]) {
@@ -378,13 +371,8 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
       console.log('Opening balance not available:', e)
     }
 
-    // ✅ Opening stock: inventory value strictly before the period starts
-    let openingStock = 0
-    for (const batch of openingInventoryRows) {
-      openingStock += Number(batch.quantity_remaining ?? 0) * Number(batch.cost_price ?? 0)
-    }
-
-    // ✅ Closing stock: inventory value at end of period
+    // ✅ Closing stock: current inventory value (ground truth from dashboard)
+    // quantity_remaining is always current; this matches the actual stock on hand
     let closingStock = 0
     for (const batch of closingInventoryRows) {
       closingStock += Number(batch.quantity_remaining ?? 0) * Number(batch.cost_price ?? 0)
@@ -435,12 +423,16 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
       }
     }
 
-    // ✅ Cash paid for restocking = same as stock value received at cost
-    const restockCash = restockStockValue
-
     const damagedLoss = damageRows.reduce((s: number, d: any) => s + Number(d.loss_amount ?? 0), 0)
 
+    // ✅ Opening stock derived via accounting identity
+    // Opening = Closing - Restocked + COGS + Damaged
+    const openingStock = closingStock - restockStockValue + cogs + damagedLoss
+
     const openingCapital = openingCash + openingStock
+
+    // ✅ Cash paid for restocking = same as stock value received at cost
+    const restockCash = restockStockValue
 
     // ✅ Closing cash accounts for restock cash outflow
     const closingCash = openingCash + totalRevenue - expenses - restockCash
@@ -496,11 +488,19 @@ export default function AccountingPage() {
   const user = useAuthStore((s) => s.user)
   const businessId = user?.business_id || ''
 
-  const PRESETS = [
-    { label: 'Today', start: todayStr, end: todayStr },
-    { label: 'This Week', start: new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10), end: todayStr },
-    { label: 'This Month', start: monthStartStr, end: todayStr },
-  ]
+  const getPresets = () => {
+    const now = new Date()
+    const todayStr = now.toISOString().slice(0, 10)
+    const monthStartStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+    const monthEndStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+    const weekStart = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)
+    return [
+      { label: 'Today',      start: todayStr, end: todayStr },
+      { label: 'This Week',  start: weekStart, end: todayStr },
+      { label: 'This Month', start: monthStartStr, end: monthEndStr },
+    ]
+  }
+  const PRESETS = getPresets()
 
   const load = useCallback(async () => {
     if (!businessId) {
@@ -563,7 +563,7 @@ export default function AccountingPage() {
         if (error) {
           console.error('Open balance update error:', error)
           toast.error(error.message || 'Unable to update opening balance')
-          setShowModal(false)
+          setSaving(false)
           return
         }
       } else {
@@ -588,40 +588,33 @@ export default function AccountingPage() {
             
             if (updateError) {
               toast.error(updateError.message || 'Unable to save opening balance')
-              setShowModal(false)
+              setSaving(false)
               return
             }
           } else if (error.code === 'PGRST301' || error.message?.includes('relation') || error.message?.includes('permission')) {
             toast.error('Opening balance table not set up yet. Contact your admin or proceed without it.')
-            setShowModal(false)
+            setSaving(false)
             setHasPromptedForOpeningBalance(true)
             return
           } else {
             toast.error(error.message || 'Unable to save opening balance')
-            setShowModal(false)
+            setSaving(false)
             setHasPromptedForOpeningBalance(true)
             return
           }
         }
       }
       
+      toast.success('Opening balance saved. Click Refresh to see updated figures.')
       setShowModal(false)
       setHasPromptedForOpeningBalance(true)
-      toast.success('Opening balance saved')
-      
-      // Reload data after successful save
-      try {
-        await load()
-      } catch (loadErr) {
-        console.error('Error reloading data after save:', loadErr)
-      }
+      setSaving(false)
     } catch (e) {
       console.error('Save error:', e)
       toast.error('Unable to save opening balance, but you can continue.')
+      setSaving(false)
       setShowModal(false)
       setHasPromptedForOpeningBalance(true)
-    } finally {
-      setSaving(false)
     }
   }
 
@@ -641,6 +634,7 @@ export default function AccountingPage() {
           saving={saving}
           initialCash={data?.openingCash}
           initialDate={data?.openingBalanceDate}
+          defaultDate={startDate}
         />
       )}
 
@@ -652,82 +646,61 @@ export default function AccountingPage() {
             Financial overview · {startDate} → {endDate}
           </p>
         </div>
-        <div className="flex gap-2">
-          <button 
+        <button onClick={() => setShowModal(true)} className="btn-primary text-sm">
+          🏦 Opening Balance
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-3">
+        <div>
+          <label className="label flex items-center gap-1">
+            <Calendar className="w-3 h-3" /> From
+          </label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => { setStartDate(e.target.value); setSelectedPreset('') }}
+            className="input"
+          />
+        </div>
+        <div>
+          <label className="label">To</label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => { setEndDate(e.target.value); setSelectedPreset('') }}
+            className="input"
+          />
+        </div>
+        <div className="flex flex-wrap gap-2 items-center">
+          {PRESETS.map((p) => {
+            const isActive = selectedPreset === p.label
+            return (
+              <button
+                key={p.label}
+                onClick={() => { setStartDate(p.start); setEndDate(p.end); setSelectedPreset(p.label) }}
+                className={`text-xs px-3 py-2 rounded-lg font-medium transition-all ${
+                  isActive
+                    ? 'bg-primary-600 text-white border border-primary-600 shadow-md'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
+                }`}
+              >
+                {p.label}
+              </button>
+            )
+          })}
+          <button
             onClick={() => {
               load().catch((err) => {
                 console.error('Load error:', err)
               })
-            }} 
-            className="btn-secondary flex items-center gap-2 text-sm"
+            }}
+            className="btn-secondary flex items-center gap-1.5 text-xs px-3 py-2"
           >
-            <RefreshCw className="w-4 h-4" /> Refresh
-          </button>
-          <button onClick={() => setShowModal(true)} className="btn-primary text-sm">
-            🏦 Opening Balance
+            <RefreshCw className="w-3 h-3" /> Refresh
           </button>
         </div>
-      </div>
-
-      {/* Filters */}
-      <div className="card p-4 space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {PRESETS.map((preset) => (
-            <button
-              key={preset.label}
-              onClick={() => {
-                setStartDate(preset.start)
-                setEndDate(preset.end)
-                setSelectedPreset(preset.label)
-              }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                selectedPreset === preset.label
-                  ? 'bg-primary-600 text-white'
-                  : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              {preset.label}
-            </button>
-          ))}
-          <button
-            onClick={() => setSelectedPreset('Custom')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-              selectedPreset === 'Custom'
-                ? 'bg-primary-600 text-white'
-                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-            }`}
-          >
-            Custom
-          </button>
-        </div>
-        {selectedPreset === 'Custom' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Calendar className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="input text-sm flex-1 min-w-[150px]"
-            />
-            <span className="text-slate-600 dark:text-slate-400">→</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-              className="input text-sm flex-1 min-w-[150px]"
-            />
-            <button
-              onClick={() => {
-                load().catch((err) => {
-                  console.error('Load error:', err)
-                })
-              }}
-              className="btn-primary text-sm"
-            >
-              Load
-            </button>
-          </div>
-        )}
       </div>
 
       {error && (

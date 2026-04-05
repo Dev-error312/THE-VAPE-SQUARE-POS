@@ -32,11 +32,18 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
   const [loading, setLoading] = useState(false)
   const [catLoading, setCatLoading] = useState(false)
   const [addingCat, setAddingCat] = useState(false)
+  const [allProducts, setAllProducts] = useState<Product[]>([])
 
   useEffect(() => {
     if (!isOpen) return
     setCatLoading(true)
-    categoriesApi.getAll().then(setCategories).catch(() => {}).finally(() => setCatLoading(false))
+    Promise.all([
+      categoriesApi.getAll(),
+      productsApi.getAll(),
+    ]).then(([cats, prods]) => {
+      setCategories(cats)
+      setAllProducts(prods)
+    }).catch(() => {}).finally(() => setCatLoading(false))
   }, [isOpen])
 
   useEffect(() => {
@@ -82,6 +89,16 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
     e.preventDefault()
     const name = form.name.trim()
     if (!name) { toast.error('Product name is required'); return }
+
+    // Check for duplicate product name (only when creating new product)
+    if (!isEdit) {
+      const nameLower = name.toLowerCase()
+      const duplicate = allProducts.find(p => p.name.toLowerCase() === nameLower)
+      if (duplicate) {
+        toast.error(`Product "${duplicate.name}" already exists`)
+        return
+      }
+    }
 
     setLoading(true)
     try {
