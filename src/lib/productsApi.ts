@@ -207,13 +207,30 @@ export const productsApi = {
     category_id?: string | null
     supplier_id?: string | null
     selling_price?: number
+    cost_price?: number
     unit?: string
     description?: string
   }): Promise<Product> {
     const businessId = getBusinessId()
+    
+    // If cost_price is being updated, update all batches for this product
+    if (updates.cost_price !== undefined) {
+      const { error: batchError } = await supabase
+        .from('inventory_batches')
+        .update({ cost_price: updates.cost_price })
+        .eq('product_id', id)
+        .eq('business_id', businessId)
+      if (batchError) {
+        console.warn('Warning: Could not update batch costs:', batchError.message)
+      }
+    }
+    
+    // Remove cost_price from updates object before updating products table
+    const { cost_price, ...productUpdates } = updates
+    
     const { data, error } = await supabase
       .from('products')
-      .update({ ...updates, updated_at: new Date().toISOString() })
+      .update({ ...productUpdates, updated_at: new Date().toISOString() })
       .eq('id', id).eq('business_id', businessId).select().single()
     if (error) throw new Error(`Failed to update product: ${error.message}`)
     return data

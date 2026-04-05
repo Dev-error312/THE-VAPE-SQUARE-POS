@@ -94,14 +94,19 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
       }
 
       if (isEdit && product) {
-        const price = parseFloat(form.selling_price)
-        if (isNaN(price) || price < 0) { toast.error('Enter a valid selling price'); setLoading(false); return }
+        const sellingPrice = parseFloat(form.selling_price)
+        if (isNaN(sellingPrice) || sellingPrice < 0) { toast.error('Enter a valid selling price'); setLoading(false); return }
+        
+        const costPrice = form.cost_price.trim() ? parseFloat(form.cost_price) : undefined
+        if (costPrice !== undefined && (isNaN(costPrice) || costPrice < 0)) { toast.error('Enter a valid cost price'); setLoading(false); return }
 
         await productsApi.update(product.id, {
           name, brand: form.brand.trim() || undefined,
           category_id: form.category_id || null,
           supplier_id: resolvedSupplierId,
-          selling_price: price, unit: form.unit,
+          selling_price: sellingPrice,
+          cost_price: costPrice,
+          unit: form.unit,
           description: form.description.trim() || undefined,
         })
 
