@@ -128,9 +128,17 @@ export default function ReportsPage() {
   const filtered = useMemo(
     () => sales
       .filter(s => (s.sale_items || []).length > 0)  // ✅ exclude orphaned sales with no items
-      .filter(s =>
-        !searchInvoice || s.sale_number.toLowerCase().includes(searchInvoice.toLowerCase()),
-      ),
+      .filter(s => {
+        if (!searchInvoice) return true
+        const searchLower = searchInvoice.toLowerCase()
+        // Search in invoice number
+        if (s.sale_number.toLowerCase().includes(searchLower)) return true
+        // Search in product names
+        const productMatches = (s.sale_items || []).some(item =>
+          item.product_name.toLowerCase().includes(searchLower)
+        )
+        return productMatches
+      }),
     [sales, searchInvoice],
   )
 
@@ -566,7 +574,7 @@ export default function ReportsPage() {
                 <div className="relative flex-1 max-w-xs">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
-                    className="input pl-9 py-2 text-sm" placeholder="Search invoice…"
+                    className="input pl-9 py-2 text-sm" placeholder="Search invoice or product…"
                     value={searchInvoice} onChange={e => setSearchInvoice(e.target.value)}
                   />
                 </div>
