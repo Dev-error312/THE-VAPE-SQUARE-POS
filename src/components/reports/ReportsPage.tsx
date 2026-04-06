@@ -153,14 +153,13 @@ export default function ReportsPage() {
   const margin    = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
 
   // ✅ Recalculate payment totals from complete sales only
+  // ✅ Include split payments: sum ALL cash_amount and ALL online_amount regardless of payment_method
   const calculatedPaymentTotals = useMemo(() => {
     const completeSales = sales.filter(s => (s.sale_items || []).length > 0)
     return {
       cash: completeSales
-        .filter(s => s.payment_method === 'cash')
         .reduce((sum, s) => sum + (s.cash_amount || 0), 0),
       online: completeSales
-        .filter(s => s.payment_method === 'online')
         .reduce((sum, s) => sum + (s.online_amount || 0), 0),
     }
   }, [sales])
@@ -256,12 +255,36 @@ export default function ReportsPage() {
         ...(isAdmin ? [profit.toFixed(2)] : []),
       ].join(',')
     })
+
+    // Build summary section
+    const summaryLines = [
+      '',
+      '--- SUMMARY ---',
+      `Report Period,${startDate} to ${endDate}`,
+      `Total Transactions,${sales.filter(s => (s.sale_items || []).length > 0).length}`,
+      '',
+      'FINANCIAL SUMMARY',
+      `Total Revenue (रु),${totalRevenue.toFixed(2)}`,
+      ...(isAdmin ? [`Total Profit (रु),${totalProfit.toFixed(2)}`] : []),
+      ...(isAdmin ? [`Total COGS (रु),${totalCost.toFixed(2)}`] : []),
+      '',
+      'PAYMENT BREAKDOWN',
+      `Cash Collected (रु),${calculatedPaymentTotals.cash.toFixed(2)}`,
+      `Online Collected (रु),${calculatedPaymentTotals.online.toFixed(2)}`,
+    ]
+
+    const csvContent = [
+      headers.join(','),
+      ...rows,
+      ...summaryLines,
+    ].join('\n')
+
     _downloadCsv(
-      [headers.join(','), ...rows].join('\n'),
+      csvContent,
       `sales-report-${startDate}-to-${endDate}.csv`,
       BOM,
     )
-    toast.success(`Exported ${sales.length} transactions`)
+    toast.success(`Exported ${sales.length} transactions with summary`)
   }
 
   const handleExportRestocks = () => {
