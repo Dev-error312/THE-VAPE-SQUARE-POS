@@ -22,14 +22,15 @@ export default function CreditsPage() {
   const [payAmount, setPayAmount] = useState('')
   const [paying, setPaying] = useState(false)
 
-  // Date filter — default: no filter (show all)
+  // Date filter — default: This Month
   const todayStr     = new Date().toISOString().slice(0, 10)
   const monthStartStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
-  const [filterStart, setFilterStart] = useState('')
-  const [filterEnd,   setFilterEnd]   = useState('')
-  const [selectedPreset, setSelectedPreset] = useState<string>('')
-
   const monthEndStr = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10)
+  
+  const [filterStart, setFilterStart] = useState(monthStartStr)
+  const [filterEnd,   setFilterEnd]   = useState(todayStr)
+  const [selectedPreset, setSelectedPreset] = useState<string>('This Month')
+
   const DATE_PRESETS = [
     { label: 'Today',      start: todayStr, end: todayStr },
     { label: 'This Week',  start: new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10), end: todayStr },
