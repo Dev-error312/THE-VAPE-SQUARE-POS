@@ -1,8 +1,7 @@
 import { supabase, isRefreshTokenExpired } from './supabase'
 import { useAuthStore } from '../store/authStore'
+import { round2 } from '../utils'
 import type { Product, InventoryBatch, Category, Supplier } from '../types'
-
-function round2(n: number) { return Math.round(n * 100) / 100 }
 
 function getBusinessId(): string {
   const store = useAuthStore.getState()
@@ -67,6 +66,10 @@ export const suppliersApi = {
       .eq('business_id', businessId)
       .limit(1)
     
+    if (checkError) {
+      console.warn('Supplier lookup warning:', checkError.message)
+    }
+    
     if (existing && existing.length > 0) {
       return existing[0] as Supplier
     }
@@ -119,6 +122,10 @@ export const categoriesApi = {
       .eq('business_id', businessId)
       .limit(1)
     
+    if (checkError) {
+      console.warn('Category lookup warning:', checkError.message)
+    }
+    
     if (existing && existing.length > 0) {
       return existing[0] as Category
     }
@@ -140,7 +147,15 @@ export const categoriesApi = {
 
 // ─── Products ──────────────────────────────────────────────────────────────
 export const productsApi = {
-  async getAll(): Promise<Product[]> {
+  /**
+   * Fetch all active products for the business.
+   * WARNING: For businesses with many products (>1000), this can cause memory issues.
+   * Consider passing pagination parameters or using filters.
+   * 
+   * @param limit - Max number of products to return (default: 10000, set lower for better performance)
+   * @param offset - Number of products to skip (default: 0)
+   */
+  async getAll(limit: number = 10000, offset: number = 0): Promise<Product[]> {
     const businessId = getBusinessId()
     const { data, error } = await supabase
       .from('products')
@@ -154,6 +169,8 @@ export const productsApi = {
       .eq('business_id', businessId)
       .eq('is_active', true)
       .order('name')
+      .limit(limit)
+      .range(offset, offset + limit - 1)
 
     if (error) throw new Error(`Products fetch failed: ${error.message}`)
 

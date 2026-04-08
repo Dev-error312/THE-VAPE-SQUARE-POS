@@ -23,18 +23,6 @@ async function getOrCreateUserProfile(authUser: {
   created_at: string
 }): Promise<User> {
 
-  const fallback: User = {
-    id: authUser.id,
-    auth_user_id: authUser.id,
-    email: authUser.email ?? '',
-    full_name: authUser.user_metadata?.full_name ?? '',
-    name: authUser.user_metadata?.full_name ?? '',
-    role: 'cashier',
-    business_id: '00000000-0000-0000-0000-000000000001',
-    business_name: 'The Vape Square',
-    created_at: authUser.created_at,
-  }
-
   try {
     const { data: existingProfile, error: profileError } = await supabase
       .from('user_profiles')
@@ -43,8 +31,8 @@ async function getOrCreateUserProfile(authUser: {
       .single()
 
     if (profileError && profileError.code !== 'PGRST116') {
-      console.warn('Profile query error:', profileError)
-      return fallback
+      console.error('❌ Profile query error:', profileError)
+      throw new Error(`Failed to fetch user profile: ${profileError.message}`)
     }
 
     if (existingProfile) {
@@ -54,8 +42,9 @@ async function getOrCreateUserProfile(authUser: {
         .eq('id', existingProfile.business_id)
         .single()
 
+      // Business lookup errors are non-critical (we log but continue)
       if (businessError) {
-        console.warn('Business query error:', businessError, 'business_id:', existingProfile.business_id)
+        console.warn('⚠️ Business lookup error (non-critical):', businessError.message)
       }
 
       const role = (existingProfile.role === 'admin' || existingProfile.role === 'cashier')
@@ -75,12 +64,12 @@ async function getOrCreateUserProfile(authUser: {
       }
     }
 
-    console.log('No existing profile found for:', authUser.id, '- treating as new user')
-    return fallback
+    // No profile found and not a "not found" error - this is unexpected
+    throw new Error(`No user profile found for auth user ${authUser.id}`)
 
   } catch (error) {
     console.error('Error in getOrCreateUserProfile:', error)
-    return fallback
+    throw error
   }
 }
 
@@ -95,10 +84,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       
       // Session retrieval failed (could be network error or invalid token)
       if (error) {
-        console.warn('⚠️ Session retrieval error:', error.message)
         // If it's a refresh token error, clear the session
         if (error.message?.includes('refresh') || error.message?.includes('Invalid')) {
-          console.log('🔄 Clearing invalid session')
           await supabase.auth.signOut().catch(() => {}) // Silently fail if already signed out
         }
         set({ user: null, session: null, loading: false })
@@ -191,6 +178,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   signOut: async () => {
     await supabase.auth.signOut()
     set({ user: null, session: null, loading: false })
+    // Also clear cart when user signs out
+    try {
+      const { useCartStore } = await import('./cartStore')
+      useCartStore.getState().clearCart?.()
+    } catch {
+      // Cart store might not be loaded yet
+    }
   },
 
   clearUser: () => {
@@ -221,11 +215,8 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
 
       if (authError || !authUser) {
-        console.warn('No authenticated user found:', authError?.message)
         return { isNewUser: true, hasBusiness: false }
       }
-
-      console.log('Authenticated user found:', authUser.email)
 
       // ── Step 1: Does a profile row exist for this auth user? ──────────────
       const { data: profileRow, error: profileError } = await supabase
@@ -258,14 +249,6 @@ export const useAuthStore = create<AuthState>((set) => ({
           hasBusiness = !bizError && !!biz
         }
       }
-
-      console.log('User status check:', {
-        email: authUser.email,
-        isNewUser,
-        hasBusiness,
-        profileExists,
-        business_id: profileRow?.business_id,
-      })
 
       // ── Step 3: Load full profile into store if they're an existing user ──
       if (!isNewUser) {

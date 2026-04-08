@@ -179,18 +179,27 @@ export interface AnalyticsRow {
   net_profit: number
 }
 
-export interface WholesaleSale {
-  id: string
-  product_id: string | null
+export interface WholesaleItem {
+  product_id: string
   product_name: string
   quantity: number
+  unit_price: number
   cost_price: number
-  selling_price: number
-  total_amount: number
-  profit: number
-  buyer_name?: string
-  notes?: string
-  sale_date: string
+  line_total: number
+}
+
+export interface WholesaleSale {
+  id: string
+  sale_number: string
+  customer_name: string
+  customer_phone: string | null
+  items: WholesaleItem[]
+  subtotal: number
+  discount_amount: number
+  total: number
+  payment_method: 'cash' | 'online' | 'credit' | 'split'
+  status: 'completed' | 'pending' | 'cancelled'
+  notes: string | null
   created_at: string
-  created_by?: string
+  sale_date: string
 }

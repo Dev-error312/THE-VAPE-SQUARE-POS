@@ -1,3 +1,10 @@
+// ─── Rounding Utility ──────────────────────────────────────────────────────
+// Rounds to 2 decimal places to avoid floating-point precision errors
+// Critical for financial calculations
+export function round2(n: number): number {
+  return Math.round(n * 100) / 100
+}
+
 // ─── Currency formatting ───────────────────────────────────────────────────
 //
 // Uses en-IN locale → produces Nepali/Indian lakh system:
@@ -107,11 +114,6 @@ export function generateBatchNumber(): string {
   const date = new Date().toISOString().slice(0, 10).replace(/-/g, '')
   const rand = Math.floor(Math.random() * 9000) + 1000
   return `BAT-${date}-${rand}`
-}
-
-/** Round a number to 2 decimal places (banker-safe). */
-export function round2(value: number): number {
-  return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
 /** Clamp a number between min and max. */

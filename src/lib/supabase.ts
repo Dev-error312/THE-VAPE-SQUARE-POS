@@ -2,11 +2,11 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error(
-    '❌ Missing Supabase environment variables.\n' +
+  throw new Error(
+    '❌ FATAL: Missing Supabase environment variables.\n' +
     'Create a .env file in the project root with:\n' +
     'VITE_SUPABASE_URL=https://your-project.supabase.co\n' +
     'VITE_SUPABASE_ANON_KEY=your-anon-key'
@@ -14,8 +14,8 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 export const supabase = createClient(
-  supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder',
+  supabaseUrl,
+  supabaseAnonKey,
   {
     auth: {
       flowType: 'implicit',
@@ -28,15 +28,20 @@ export const supabase = createClient(
 
 // ─── Auth State Change Listener ─────────────────────────────────────────────
 // Handle token refresh failures and session expiration
-supabase.auth.onAuthStateChange(async (event, session) => {
+// IMPORTANT: Store the unsubscribe function to prevent memory leaks
+const authUnsubscribe = supabase.auth.onAuthStateChange(async (event, session) => {
   if (event === 'SIGNED_OUT') {
     // User explicitly signed out or session invalidated
     console.log('✋ User signed out or session invalidated')
     try {
       const { useAuthStore } = await import('../store/authStore')
-      useAuthStore.getState().clearUser?.()
+      const authStore = useAuthStore.getState()
+      authStore.clearUser?.()
+      // Also clear cart when user logs out
+      const { useCartStore } = await import('../store/cartStore')
+      useCartStore.getState().clearCart?.()
     } catch {
-      // clearUser might not exist yet
+      // clearUser/clearCart might not exist yet
     }
   }
 
@@ -47,12 +52,16 @@ supabase.auth.onAuthStateChange(async (event, session) => {
       const { useAuthStore } = await import('../store/authStore')
       const authStore = useAuthStore.getState()
       authStore.clearUser?.()
-      // Redirect to login only if not already there
-      if (!window.location.pathname.includes('/auth')) {
+      // Redirect to login only if not already on auth page
+      // Check carefully to avoid redirect loops (e.g., /auth?error=...)
+      const isAuthPage = window.location.pathname === '/auth' || window.location.pathname.startsWith('/auth/')
+      if (!isAuthPage) {
         window.location.href = '/auth'
       }
     } catch {
-      if (!window.location.pathname.includes('/auth')) {
+      // If auth import fails, still try to redirect safely
+      const isAuthPage = window.location.pathname === '/auth' || window.location.pathname.startsWith('/auth/')
+      if (!isAuthPage) {
         window.location.href = '/auth'
       }
     }
@@ -69,6 +78,11 @@ supabase.auth.onAuthStateChange(async (event, session) => {
     }
   }
 })
+
+// Export the unsubscribe function so it can be called during cleanup if needed
+export function unsubscribeFromAuthChanges(): void {
+  authUnsubscribe?.data?.subscription?.unsubscribe?.()
+}
 
 // ─── Error Detection Helper ────────────────────────────────────────────────
 export function isRefreshTokenExpired(error: unknown): boolean {

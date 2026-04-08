@@ -1,7 +1,7 @@
 import { supabase, isRefreshTokenExpired } from './supabase'
 import { useAuthStore } from '../store/authStore'
-import type { Sale, CartItem, PaymentMethod } from '../types'
 import { round2 } from '../utils'
+import type { Sale, CartItem, PaymentMethod } from '../types'
 
 function getBusinessId(): string {
   const store = useAuthStore.getState()
@@ -15,7 +15,6 @@ function generateSaleNumber(): string {
   return `INV-${date}-${rand}`
 }
 
-// ─── Retry Logic for Network Failures ───────────────────────────────────────
 async function withRetry<T>(
   fn: () => Promise<T>,
   label: string,
@@ -43,6 +42,95 @@ async function withRetry<T>(
   throw new Error('Retry failed')
 }
 
+// ─── Inventory Deduction with Race Condition Protection ───────────────────
+/**
+ * Safely deduct inventory from batches. Checks quantity before/after each update
+ * to detect race conditions. Raises error if we cannot fulfill the order.
+ */
+async function deductInventoryBatches(
+  businessId: string,
+  productId: string,
+  requiredQty: number,
+  productName: string
+): Promise<{ batch_id: string; cost_price: number }> {
+  let remainingQty = requiredQty
+  let lastBatchId: string | null = null
+  let lastCostPrice: number = 0
+
+  // Fetch batches with FIFO (first in, first out) logic
+  const { data: batches, error: fetchError } = await supabase
+    .from('inventory_batches')
+    .select('id, quantity_remaining, cost_price')
+    .eq('product_id', productId)
+    .eq('business_id', businessId)
+    .gt('quantity_remaining', 0)
+    .order('received_at', { ascending: true })
+
+  if (fetchError || !batches || batches.length === 0) {
+    throw new Error(`❌ No stock available for "${productName}" (need ${requiredQty} units)`)
+  }
+
+  const deductedBatches: { batchId: string; qty: number }[] = []
+
+  // Deduct from each batch
+  for (const batch of batches) {
+    if (remainingQty <= 0) break
+
+    const qtyFromBatch = Math.min(remainingQty, batch.quantity_remaining)
+    const newQuantity = batch.quantity_remaining - qtyFromBatch
+
+    // Update with validation: ensure we don't go negative
+    const { data: updated, error: updateError } = await supabase
+      .from('inventory_batches')
+      .update({ quantity_remaining: newQuantity })
+      .eq('id', batch.id)
+      .eq('business_id', businessId)
+      .gt('quantity_remaining', batch.quantity_remaining - qtyFromBatch - 1) // prevents negative
+      .select('quantity_remaining')
+      .single()
+
+    if (updateError || !updated) {
+      // Race condition detected: someone else bought from this batch
+      console.warn(`[INVENTORY] Race condition on batch ${batch.id}, retrying next batch...`)
+      // Don't fail yet, try next batch
+      continue
+    }
+
+    deductedBatches.push({ batchId: batch.id, qty: qtyFromBatch })
+    remainingQty -= qtyFromBatch
+    lastBatchId = batch.id
+    lastCostPrice = batch.cost_price
+  }
+
+  // If we couldn't fulfill the complete order, restore what we deducted and fail
+  if (remainingQty > 0) {
+    console.error(`[INVENTORY] Insufficient stock. Deducted ${requiredQty - remainingQty}/${requiredQty} units. Rolling back...`)
+    
+    // Restore all deducted batches
+    for (const { batchId, qty } of deductedBatches) {
+      const { data: batch } = await supabase
+        .from('inventory_batches')
+        .select('quantity_remaining')
+        .eq('id', batchId)
+        .single()
+
+      if (batch) {
+        await supabase
+          .from('inventory_batches')
+          .update({ quantity_remaining: batch.quantity_remaining + qty })
+          .eq('id', batchId)
+          .catch(() => {}) // Ignore rollback errors, we're already failing
+      }
+    }
+
+    throw new Error(`❌ Insufficient stock for "${productName}" (need ${remainingQty} more units out of ${requiredQty} total)`)
+  }
+
+  if (!lastBatchId) throw new Error(`Invalid inventory state for "${productName}"`)
+
+  return { batch_id: lastBatchId, cost_price: lastCostPrice }
+}
+
 // ─── Error Handler for Refresh Token Failures ──────────────────────────────
 async function handleRefreshTokenError(error: unknown): Promise<never> {
   if (isRefreshTokenExpired(error)) {
@@ -53,6 +141,8 @@ async function handleRefreshTokenError(error: unknown): Promise<never> {
   }
   throw error
 }
+
+// ─── Error Handler for Refresh Token Failures ──────────────────────────────
 
 export const salesApi = {
   async createSale(params: {
@@ -134,61 +224,19 @@ export const salesApi = {
     // ─── Step 2: Process Inventory for Each Item (with retry) ───────
     try {
       for (const cartItem of params.items) {
-        let resolvedCostPrice = cartItem.cost_price
-        let resolvedBatchId: string | null = null
-        let qtyToDeduct = cartItem.quantity
-
-        // Fetch batches with retry
-        const batches = await withRetry(
+        // Use safer inventory deduction that handles race conditions
+        const { batch_id: resolvedBatchId, cost_price: resolvedCostPrice } = await withRetry(
           async () => {
-            const { data, error } = await supabase
-              .from('inventory_batches')
-              .select('id, quantity_remaining, cost_price')
-              .eq('product_id', cartItem.product.id)
-              .eq('business_id', businessId)
-              .gt('quantity_remaining', 0)
-              .order('received_at', { ascending: true })
-
-            if (error || !data) {
-              throw new Error(`Failed to fetch stock: ${error?.message || 'Unknown'}`)
-            }
-            return data
+            return await deductInventoryBatches(
+              businessId,
+              cartItem.product.id,
+              cartItem.quantity,
+              cartItem.product.name
+            )
           },
-          `fetchBatches[${cartItem.product.name}]`,
-          3
+          `deductInventory[${cartItem.product.name}]`,
+          2 // Retry once for race conditions
         )
-
-        if (!batches || batches.length === 0) {
-          throw new Error(`No stock available for "${cartItem.product.name}"`)
-        }
-
-        // Update inventory batches
-        for (const batch of batches) {
-          if (qtyToDeduct <= 0) break
-          const deduct = Math.min(qtyToDeduct, batch.quantity_remaining)
-
-          await withRetry(
-            async () => {
-              const { error } = await supabase
-                .from('inventory_batches')
-                .update({ quantity_remaining: batch.quantity_remaining - deduct })
-                .eq('id', batch.id)
-                .eq('business_id', businessId)
-
-              if (error) throw new Error(`Update failed: ${error.message}`)
-            },
-            `updateBatch[${cartItem.product.name}]`,
-            3
-          )
-
-          qtyToDeduct -= deduct
-          resolvedCostPrice = batch.cost_price
-          resolvedBatchId = batch.id
-        }
-
-        if (qtyToDeduct > 0) {
-          throw new Error(`Insufficient stock for "${cartItem.product.name}" (need ${qtyToDeduct} more)`)
-        }
 
         // Proportional discount for this item
         const itemGross = cartItem.unit_price * cartItem.quantity

@@ -4,7 +4,7 @@ import { useIsAdmin } from '../../hooks/useRole'
 import { useAuthStore } from '../../store/authStore'
 import { formatCurrency, formatDate } from '../../utils'
 import { productsApi } from '../../lib/productsApi'
-import type { Product } from '../../types'
+import type { Product, WholesaleSale, WholesaleItem } from '../../types'
 import {
   Plus, Search, RefreshCw, Eye, Trash2, Store,
   DollarSign, ShoppingBag, TrendingUp, Package, X, Calendar,
@@ -14,32 +14,6 @@ import ConfirmDialog from '../shared/ConfirmDialog'
 import Modal from '../shared/Modal'
 import toast from 'react-hot-toast'
 import { validateRequired } from '../../utils/validation'
-
-// ─── Types ─────────────────────────────────────────────────────────────────
-interface WholesaleItem {
-  product_id: string
-  product_name: string
-  quantity: number
-  unit_price: number
-  cost_price: number
-  line_total: number
-}
-
-interface WholesaleSale {
-  id: string
-  sale_number: string
-  customer_name: string
-  customer_phone: string | null
-  items: WholesaleItem[]
-  subtotal: number
-  discount_amount: number
-  total: number
-  payment_method: 'cash' | 'online' | 'credit' | 'split'
-  status: 'completed' | 'pending' | 'cancelled'
-  notes: string | null
-  created_at: string
-  sale_date: string
-}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────
 const paymentBadge = (method: string) => {
