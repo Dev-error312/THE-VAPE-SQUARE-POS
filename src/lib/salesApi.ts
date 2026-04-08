@@ -115,11 +115,14 @@ async function deductInventoryBatches(
         .single()
 
       if (batch) {
-        await supabase
-          .from('inventory_batches')
-          .update({ quantity_remaining: batch.quantity_remaining + qty })
-          .eq('id', batchId)
-          .catch(() => {}) // Ignore rollback errors, we're already failing
+        try {
+          await supabase
+            .from('inventory_batches')
+            .update({ quantity_remaining: batch.quantity_remaining + qty })
+            .eq('id', batchId)
+        } catch {
+          // Ignore rollback errors, we're already failing
+        }
       }
     }
 

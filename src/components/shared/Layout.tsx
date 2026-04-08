@@ -2,7 +2,7 @@ import { NavLink, useNavigate, Link } from 'react-router-dom'
 import {
   LayoutDashboard, ShoppingCart, Package, BarChart3,
   LogOut, ShoppingBag, Menu, X, ChevronRight,
-  TrendingUp, DollarSign, CreditCard, Store, Users, Calculator,
+  TrendingUp, DollarSign, CreditCard, Store, Users,
   HelpCircle, BookOpen, Sparkles, Settings
 } from 'lucide-react'
 import { useState } from 'react'

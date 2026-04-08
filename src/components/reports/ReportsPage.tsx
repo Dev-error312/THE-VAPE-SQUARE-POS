@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { supabase } from '../../lib/supabase'
-import { useBusinessId } from '../../hooks/useRole'
+
 import { salesApi } from '../../lib/salesApi'
 import { purchasesApi } from '../../lib/productsApi'
 import type { RestockRecord } from '../../lib/productsApi'
@@ -36,10 +35,7 @@ const restockBadgeCls = (type: string) => {
 }
 
 export default function ReportsPage() {
-  const today      = new Date().toISOString().slice(0, 10)
-  const monthStart = new Date(
-    new Date().getFullYear(), new Date().getMonth(), 1,
-  ).toISOString().slice(0, 10)
+  const today = new Date().toISOString().slice(0, 10)
 
   // ── date range — defaults to Today on first load ─────────────────────
   const [startDate, setStartDate] = useState(today)
@@ -51,8 +47,8 @@ export default function ReportsPage() {
 
   // ── sales state ─────────────────────────────────────────────────────────
   const [sales,         setSales]         = useState<Sale[]>([])
-  const [chartData,     setChartData]     = useState<{ date: string; revenue: number; profit: number }[]>([])
-  const [paymentTotals, setPaymentTotals] = useState({ cash: 0, online: 0 })
+  const [, setChartData] = useState<{ date: string; revenue: number; profit: number }[]>([])
+  const [, setPaymentTotals] = useState({ cash: 0, online: 0 })
   const [salesLoading,  setSalesLoading]  = useState(true)
   const [searchInvoice, setSearchInvoice] = useState('')
   const [selectedSale,  setSelectedSale]  = useState<Sale | null>(null)
@@ -66,8 +62,6 @@ export default function ReportsPage() {
   const [deletingRestock,    setDeletingRestock]    = useState(false)
 
   // ── globals ─────────────────────────────────────────────────────────────
-  const businessId = useBusinessId()
-  const triggerSales = useRefreshStore(s => s.triggerSales)
   const salesVersion = useRefreshStore(s => s.salesVersion)
   const isAdmin      = useIsAdmin()
 

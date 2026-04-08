@@ -15,7 +15,7 @@ export default function WhatsNewPage() {
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [hasUnseenUpdates, setHasUnseenUpdates] = useState(false)
+  const [, setHasUnseenUpdates] = useState(false)
   const [showUnseenModal, setShowUnseenModal] = useState(false)
 
   const loadUpdates = useCallback(async () => {

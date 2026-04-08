@@ -18,7 +18,7 @@ export default function RegisterBusinessPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [mounted, setMounted] = useState(true)
+  const [mounted] = useState(true)
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()

@@ -4,7 +4,7 @@ import { useIsAdmin } from '../../hooks/useRole'
 import { useAuthStore } from '../../store/authStore'
 import {
   Plus, Trash2, RefreshCw, Users, Shield,
-  ShoppingBag, AlertCircle, UserCheck, X
+  ShoppingBag, AlertCircle, UserCheck
 } from 'lucide-react'
 import LoadingSpinner from '../shared/LoadingSpinner'
 import ConfirmDialog from '../shared/ConfirmDialog'

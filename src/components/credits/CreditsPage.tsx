@@ -58,20 +58,6 @@ export default function CreditsPage() {
       //   - payment_type === 'credit' or 'partial'   (still pending/partial)
       //   - OR paid_amount > 0 and total_amount > 0   (has been paid toward, i.e. was credit/partial)
       // This includes records that were credited and are now fully paid (payment_type = 'full').
-      const creditRecords = pur.filter(p =>
-        p.payment_type === 'credit' ||
-        p.payment_type === 'partial' ||
-        // Was a credit that is now fully paid: paid_amount equals total AND total > 0
-        (p.payment_type === 'full' && p.paid_amount > 0 && p.total_amount > 0 &&
-         // Only include if it was originally a credit (remaining was ever > 0)
-         // We detect this by checking if paid_amount was tracked incrementally
-         // Since 'full' from the start has paid_amount = total_amount, we need another signal.
-         // Safe heuristic: include full-paid where paid_amount was updated post-creation
-         // We can't distinguish this without an initial_type column, so we include ALL
-         // non-zero purchases — the user can filter by status to see only pending
-         false
-        )
-      )
       // SIMPLER: just show all purchases that are credit or partial (pending OR paid via partial flow)
       // When recordPayment sets payment_type = 'full', we ALSO keep it visible by including
       // any record where paid_amount > 0 AND the original type was tracked as partial.
