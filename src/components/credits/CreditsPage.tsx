@@ -103,7 +103,6 @@ export default function CreditsPage() {
 
   // With creditOnly:true from the API, all records in `purchases` are original credit/partial
   // No need to filter further — just use `purchases` directly
-  const creditPurchases = useMemo(() => purchases, [purchases])
 
   const filtered = useMemo(() => {
     return purchases.filter(p => {
@@ -116,7 +115,7 @@ export default function CreditsPage() {
         (filterStatus === 'pending' && !isPaid)
       return matchSup && matchStatus
     })
-  }, [creditPurchases, filterSupplier, filterStatus])
+  }, [purchases, filterSupplier, filterStatus])
 
   // Stats over credit/partial purchases only
   const stats = useMemo(() => {

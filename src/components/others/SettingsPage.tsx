@@ -36,7 +36,7 @@ export default function SettingsPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [settings])
 
   useEffect(() => {
     load()

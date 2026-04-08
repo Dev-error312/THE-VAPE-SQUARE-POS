@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
@@ -8,14 +8,7 @@ export default function AuthCallbackPage() {
   const { checkUserStatus } = useAuthStore()
   const handled = useRef(false)
 
-  useEffect(() => {
-    if (handled.current) return
-    handled.current = true
-
-    handleCallback()
-  }, [])
-
-  async function handleCallback() {
+  const handleCallback = useCallback(async () => {
     try {
       // ── Check if user already has a valid session before OAuth
       const { data: existingSession } = await supabase.auth.getSession()
@@ -85,7 +78,14 @@ export default function AuthCallbackPage() {
       console.error('❌ Auth callback error:', err)
       navigate('/auth?error=callback_failed', { replace: true })
     }
-  }
+  }, [navigate, checkUserStatus])
+
+  useEffect(() => {
+    if (handled.current) return
+    handled.current = true
+
+    handleCallback()
+  }, [handleCallback])
 
   return (
     <div style={{

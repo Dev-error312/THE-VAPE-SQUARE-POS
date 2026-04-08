@@ -112,8 +112,6 @@ export default function ReportsPage() {
     } else if (activeTab === 'restocks') {
       loadRestocks()
     }
-  // loadSales / loadRestocks already include date deps; salesVersion forces a refresh
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadSales, loadRestocks, salesVersion, activeTab])
 
   // ─────────────────────────────────────────────────────────────────────────

@@ -21,6 +21,7 @@ export function UpdatesAdminPage() {
   // Check authorization
   const isAuthorized = user?.email === ADMIN_EMAIL
 
+  // Check authorization early
   if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex items-center justify-center p-4">
@@ -44,10 +45,13 @@ export function UpdatesAdminPage() {
     )
   }
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
   useEffect(() => {
-    loadNextVersion()
-    loadUpdates()
-  }, [])
+    if (isAuthorized) {
+      loadNextVersion()
+      loadUpdates()
+    }
+  }, [isAuthorized])
 
   const loadUpdates = async () => {
     try {
