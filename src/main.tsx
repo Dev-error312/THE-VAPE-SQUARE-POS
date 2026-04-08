@@ -7,13 +7,16 @@ import './index.css'
 // Prevent console spam from browser extensions that don't properly clean up
 // async message listeners (React DevTools, Grammarly, LastPass, ad blockers, etc)
 const isExtensionError = (error: any) => {
-  const message = error?.message || String(error)
-  return (
-    message.includes('message channel closed') ||
-    message.includes('listener indicated an asynchronous response') ||
-    message.includes('Extension context invalidated') ||
-    message.includes('The message port closed before a response was received')
-  )
+  const message = (error?.message || String(error)).toLowerCase()
+  const extensionKeywords = [
+    'message channel closed',
+    'listener indicated an asynchronous response',
+    'extension context invalidated',
+    'message port closed before a response was received',
+    'the message port closed',
+    'asynchronous response by returning true',
+  ]
+  return extensionKeywords.some(keyword => message.includes(keyword))
 }
 
 // Suppress in console.error to prevent logging
@@ -26,13 +29,17 @@ console.error = function(...args: any[]) {
 }
 
 window.addEventListener('unhandledrejection', (event) => {
-  if (isExtensionError(event.reason)) {
+  // Extract error message from various sources
+  const reason = event.reason
+  const message = reason?.message || String(reason)
+  
+  if (isExtensionError(reason) || isExtensionError(message)) {
     event.preventDefault() // silently suppress — not an app error
   }
 })
 
 window.addEventListener('error', (event) => {
-  if (isExtensionError(event.error)) {
+  if (isExtensionError(event.error) || isExtensionError(event.message)) {
     event.preventDefault() // silently suppress — not an app error
   }
 })
