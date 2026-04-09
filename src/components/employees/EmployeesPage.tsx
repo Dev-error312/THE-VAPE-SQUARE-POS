@@ -101,7 +101,6 @@ export default function EmployeesPage() {
           .from('user_profiles')
           .select('*')
           .eq('business_id', user.business_id)
-          .eq('is_active', true)
           .order('created_at', { ascending: true }),
 
         supabase.rpc('get_business_user_usage', {
@@ -144,9 +143,7 @@ export default function EmployeesPage() {
       const user = useAuthStore.getState().user
       if (!user?.business_id) throw new Error('Not authenticated')
 
-      // Step 1 — Create auth user via Supabase Admin API
-      // Note: This requires a Supabase Edge Function or service role key.
-      // For now we use signUp (user gets a confirmation email).
+      // Step 1 — Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email:    form.email.trim().toLowerCase(),
         password: form.password,
@@ -156,7 +153,7 @@ export default function EmployeesPage() {
       if (authError) throw new Error(authError.message)
       if (!authData.user) throw new Error('Failed to create auth user')
 
-      // Step 2 — Create user_profile (trigger will enforce limits + sync to users table)
+      // Step 2 — Create user_profile
       const { error: profileError } = await supabase
         .from('user_profiles')
         .insert({
@@ -165,10 +162,10 @@ export default function EmployeesPage() {
           role:         form.role,
           name:         form.name.trim(),
           email:        form.email.trim().toLowerCase(),
+          is_active:    true,
         })
 
       if (profileError) {
-        // Trigger threw a limit error — surface it clearly
         throw new Error(profileError.message)
       }
 

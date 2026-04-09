@@ -1,0 +1,8 @@
+{
+  "tasks": {
+    "start": "deno run -A --unstable-kv api/index.ts"
+  },
+  "imports": {
+    "std/": "https://deno.land/std@0.208.0/"
+  }
+}
