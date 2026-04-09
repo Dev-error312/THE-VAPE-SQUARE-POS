@@ -192,11 +192,13 @@ export default function EmployeesPage() {
       return
     }
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('user_profiles')
         .update({ role: newRole })
         .eq('id', employee.id)
+        .select()
       if (error) throw new Error(error.message)
+      if (!data || data.length === 0) throw new Error('Update failed — insufficient permissions')
       toast.success('Role updated')
       load()
     } catch (e: unknown) {
@@ -210,11 +212,13 @@ export default function EmployeesPage() {
     setDeleting(true)
     try {
       // Soft delete — set is_active = false, preserves all historical data
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('user_profiles')
         .update({ is_active: false })
         .eq('id', deleteTarget.id)
+        .select()
       if (error) throw new Error(error.message)
+      if (!data || data.length === 0) throw new Error('Deactivation failed — insufficient permissions')
       toast.success('Employee deactivated')
       setDeleteTarget(null)
       load()
