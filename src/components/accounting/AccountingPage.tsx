@@ -297,16 +297,32 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
       }
     }
 
-    const [saleItemRows, expRows, closingInventoryRows, damageRows, restockRows, wholesaleRows] = await Promise.all([
+    // ── Nepal is UTC+5:45 — convert local date boundaries to UTC ────────
+    // "from" date at 00:00 Nepal time = previous day at 18:15 UTC
+    // "to" date at 23:59:59 Nepal time = same day at 18:14:59 UTC
+    const nepalOffsetMs = (5 * 60 + 45) * 60 * 1000
+    const fromUTC = new Date(new Date(`${from}T00:00:00`).getTime() - nepalOffsetMs).toISOString()
+    const toUTC   = new Date(new Date(`${to}T23:59:59.999`).getTime() - nepalOffsetMs).toISOString()
+
+    const [
+      salesRows,        // retail sales with their items
+      expRows,          // expenses
+      closingInventoryRows, // current stock
+      damageRows,       // damaged products
+      restockRows,      // purchases with actual paid amounts
+      wholesaleRows,    // wholesale sales with items JSON
+    ] = await Promise.all([
+      // ── Retail sales: fetch the sale total + sale_items for COGS ──────
       execQuery(() =>
         supabase
-          .from('sale_items')
-          .select('line_total,cost_price,quantity,sales!inner(status,created_at)')
+          .from('sales')
+          .select('total, sale_items(cost_price, quantity, line_total)')
           .eq('business_id', businessId)
-          .eq('sales.status', 'completed')
-          .gte('sales.created_at', `${from}T00:00:00.000Z`)
-          .lte('sales.created_at', `${to}T23:59:59.999Z`)
+          .eq('status', 'completed')
+          .gte('created_at', fromUTC)
+          .lte('created_at', toUTC)
       ),
+      // ── Expenses ─────────────────────────────────────────────────────
       execQuery(() =>
         supabase
           .from('expenses')
@@ -315,14 +331,14 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
           .gte('expense_date', from)
           .lte('expense_date', to)
       ),
-      // Closing stock: current quantity_remaining × cost_price for ALL batches
-      // (quantity_remaining is already the current truth; no date filter needed)
+      // ── Closing stock: current inventory (ground truth) ──────────────
       execQuery(() =>
         supabase
           .from('inventory_batches')
-          .select('cost_price,quantity_remaining')
+          .select('cost_price, quantity_remaining')
           .eq('business_id', businessId)
       ),
+      // ── Damaged products ─────────────────────────────────────────────
       execQuery(() =>
         supabase
           .from('damaged_products')
@@ -331,32 +347,36 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
           .gte('damage_date', from)
           .lte('damage_date', to)
       ),
+      // ── Purchases/Restocks: fetch total_amount + paid_amount ─────────
+      // total_amount = stock value received (for inventory movement)
+      // paid_amount  = actual cash paid out (for cash flow)
       execQuery(() =>
         supabase
           .from('purchases')
-          .select('inventory_batches(quantity_received,cost_price)')
+          .select('total_amount, paid_amount')
           .eq('business_id', businessId)
-          .gte('created_at', `${from}T00:00:00.000Z`)
-          .lte('created_at', `${to}T23:59:59.999Z`)
+          .gte('created_at', fromUTC)
+          .lte('created_at', toUTC)
       ),
+      // ── Wholesale: fetch total + items JSON (NOT flat legacy fields) ──
       execQuery(() =>
         supabase
           .from('wholesale_sales')
-          .select('quantity,cost_price,selling_price')
+          .select('total, items')
           .eq('business_id', businessId)
           .gte('sale_date', from)
           .lte('sale_date', to)
       ),
     ])
 
-    // Fetch opening cash from DB
+    // ── Fetch opening cash from DB ──────────────────────────────────────
     let openingCash = 0
     let hasOpeningBalance = false
     let openingBalanceDate = ''
     try {
       const { data: obRows } = await supabase
         .from('accounting_opening_balance')
-        .select('cash_amount,balance_date')
+        .select('cash_amount, balance_date')
         .eq('business_id', businessId)
         .lte('balance_date', to)
         .order('balance_date', { ascending: false })
@@ -370,36 +390,36 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
       console.log('Opening balance not available:', e)
     }
 
-    // ✅ Closing stock: current inventory value (ground truth from dashboard)
-    // quantity_remaining is always current; this matches the actual stock on hand
+    // ── Closing stock: current inventory value ──────────────────────────
     let closingStock = 0
     for (const batch of closingInventoryRows) {
       closingStock += Number(batch.quantity_remaining ?? 0) * Number(batch.cost_price ?? 0)
     }
 
-    let retailRevenue = 0,
-      wholesaleRevenue = 0,
-      retailCogs = 0,
-      wholesaleCogs = 0
-
-    // Calculate retail revenue and COGS
-    for (const item of saleItemRows) {
-      const sale = Array.isArray(item.sales) ? item.sales[0] : item.sales
-      if (!sale || sale.status !== 'completed') continue
-      retailRevenue += Number(item.line_total ?? 0)
-      retailCogs += Number(item.cost_price ?? 0) * Number(item.quantity ?? 0)
+    // ── Retail revenue & COGS ───────────────────────────────────────────
+    // Revenue = sales.total (actual amount collected from customer)
+    // COGS = sum of (cost_price × quantity) from sale_items
+    let retailRevenue = 0
+    let retailCogs = 0
+    for (const sale of salesRows) {
+      retailRevenue += Number(sale.total ?? 0)
+      const items = Array.isArray(sale.sale_items) ? sale.sale_items : []
+      for (const item of items) {
+        retailCogs += Number(item.cost_price ?? 0) * Number(item.quantity ?? 0)
+      }
     }
 
-    // Calculate wholesale revenue and COGS from wholesale_sales
+    // ── Wholesale revenue & COGS ────────────────────────────────────────
+    // Revenue = wholesale_sales.total (actual amount charged)
+    // COGS = sum of (cost_price × quantity) from items JSON array
+    let wholesaleRevenue = 0
+    let wholesaleCogs = 0
     for (const wsale of wholesaleRows) {
-      const quantity = Number(wsale.quantity ?? 0)
-      const costPrice = Number(wsale.cost_price ?? 0)
-      const sellingPrice = Number(wsale.selling_price ?? 0)
-      const lineTotal = quantity * sellingPrice
-      const itemCogs = quantity * costPrice
-      
-      wholesaleRevenue += lineTotal
-      wholesaleCogs += itemCogs
+      wholesaleRevenue += Number(wsale.total ?? 0)
+      const items = Array.isArray(wsale.items) ? wsale.items : []
+      for (const item of items) {
+        wholesaleCogs += Number(item.cost_price ?? 0) * Number(item.quantity ?? 0)
+      }
     }
 
     const totalRevenue = retailRevenue + wholesaleRevenue
@@ -408,32 +428,25 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
     const expenses = expRows.reduce((s: number, e: any) => s + Number(e.amount ?? 0), 0)
     const netProfit = grossProfit - expenses
 
-    // ✅ Restock: calculate both stock value received AND cash paid out
+    // ── Restock: stock value received vs cash actually paid ─────────────
+    // restockStockValue = total_amount (what the stock is worth)
+    // restockCash       = paid_amount  (actual cash that left the register)
     let restockStockValue = 0
+    let restockCash = 0
     for (const purchase of restockRows) {
-      const batches = Array.isArray(purchase.inventory_batches) 
-        ? purchase.inventory_batches 
-        : purchase.inventory_batches 
-          ? [purchase.inventory_batches]
-          : []
-      
-      for (const batch of batches) {
-        restockStockValue += Number(batch.quantity_received ?? 0) * Number(batch.cost_price ?? 0)
-      }
+      restockStockValue += Number(purchase.total_amount ?? 0)
+      restockCash += Number(purchase.paid_amount ?? 0)
     }
 
     const damagedLoss = damageRows.reduce((s: number, d: any) => s + Number(d.loss_amount ?? 0), 0)
 
-    // ✅ Opening stock derived via accounting identity
-    // Opening = Closing - Restocked + COGS + Damaged
+    // ── Opening stock via accounting identity ───────────────────────────
+    // Opening = Closing − Restocked + Sold(COGS) + Damaged
     const openingStock = closingStock - restockStockValue + cogs + damagedLoss
 
     const openingCapital = openingCash + openingStock
 
-    // ✅ Cash paid for restocking = same as stock value received at cost
-    const restockCash = restockStockValue
-
-    // ✅ Closing cash accounts for restock cash outflow
+    // ── Closing cash: accounts for actual cash paid out ─────────────────
     const closingCash = openingCash + totalRevenue - expenses - restockCash
     const currentCapital = closingCash + closingStock
 
@@ -551,13 +564,14 @@ export default function AccountingPage() {
     try {
       if (data?.hasOpeningBalance) {
         // Update existing - unique constraint is on business_id only
-        const { error } = await supabase
+        const { data: updated, error } = await supabase
           .from('accounting_opening_balance')
           .update({
             cash_amount: input.cash,
             balance_date: input.date,
           })
           .eq('business_id', businessId)
+          .select()
         
         if (error) {
           console.error('Open balance update error:', error)
@@ -565,28 +579,38 @@ export default function AccountingPage() {
           setSaving(false)
           return
         }
+        if (!updated || updated.length === 0) {
+          console.error('Open balance update returned no rows — likely RLS issue')
+          toast.error('Update failed — check database permissions')
+          setSaving(false)
+          return
+        }
       } else {
         // Insert new
-        const { error } = await supabase.from('accounting_opening_balance').insert({
-          business_id: businessId,
-          cash_amount: input.cash,
-          balance_date: input.date,
-        })
+        const { error } = await supabase
+          .from('accounting_opening_balance')
+          .insert({
+            business_id: businessId,
+            cash_amount: input.cash,
+            balance_date: input.date,
+          })
+          .select()
         
         if (error) {
           console.error('Open balance insert error:', error)
           if (error.message?.includes('duplicate') || error.message?.includes('unique')) {
             // Record exists, update it instead
-            const { error: updateError } = await supabase
+            const { data: updated, error: updateError } = await supabase
               .from('accounting_opening_balance')
               .update({
                 cash_amount: input.cash,
                 balance_date: input.date,
               })
               .eq('business_id', businessId)
+              .select()
             
-            if (updateError) {
-              toast.error(updateError.message || 'Unable to save opening balance')
+            if (updateError || !updated || updated.length === 0) {
+              toast.error(updateError?.message || 'Unable to save opening balance — check permissions')
               setSaving(false)
               return
             }
@@ -604,10 +628,12 @@ export default function AccountingPage() {
         }
       }
       
-      toast.success('Opening balance saved. Click Refresh to see updated figures.')
+      toast.success('Opening balance saved!')
       setShowModal(false)
       setHasPromptedForOpeningBalance(true)
       setSaving(false)
+      // Auto-reload data so the UI updates immediately
+      load()
     } catch (e) {
       console.error('Save error:', e)
       toast.error('Unable to save opening balance, but you can continue.')
