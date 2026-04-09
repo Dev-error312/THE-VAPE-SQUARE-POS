@@ -8,21 +8,32 @@ const YEAR = new Date().getFullYear()
 export default function Footer() {
   const [version, setVersion] = useState('v1.0.0')
 
+  const fetchLatestVersion = async () => {
+    try {
+      // Get all published updates and get the first one (latest)
+      const updates = await updatesApi.getAll()
+      if (updates.length > 0) {
+        setVersion(`v${updates[0].version}`)
+      }
+    } catch (err) {
+      console.warn('Failed to fetch app version:', err)
+      // Keep default version if fetch fails
+    }
+  }
+
   useEffect(() => {
-    const fetchLatestVersion = async () => {
-      try {
-        // Get all published updates and get the first one (latest)
-        const updates = await updatesApi.getAll()
-        if (updates.length > 0) {
-          setVersion(`v${updates[0].version}`)
-        }
-      } catch (err) {
-        console.warn('Failed to fetch app version:', err)
-        // Keep default version if fetch fails
+    // Fetch version on mount
+    fetchLatestVersion()
+
+    // Refetch when app comes back into focus
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchLatestVersion()
       }
     }
 
-    fetchLatestVersion()
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
 
   return (
