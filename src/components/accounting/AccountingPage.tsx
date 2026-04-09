@@ -22,6 +22,7 @@ interface AccountingData {
   damagedLoss: number
   closingCash: number
   closingStock: number
+  creditOutstanding: number
   currentCapital: number
   cashChange: number
   stockChange: number
@@ -440,6 +441,25 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
 
     const damagedLoss = damageRows.reduce((s: number, d: any) => s + Number(d.loss_amount ?? 0), 0)
 
+    // ── Credit outstanding: total unpaid amount to suppliers ─────────────
+    // This is a running total (NOT date-filtered) — debts persist until paid
+    let creditOutstanding = 0
+    try {
+      const { data: creditRows } = await supabase
+        .from('purchases')
+        .select('total_amount, paid_amount')
+        .eq('business_id', businessId)
+        .in('original_payment_type', ['credit', 'partial'])
+      if (creditRows) {
+        for (const row of creditRows) {
+          const remaining = Number(row.total_amount ?? 0) - Number(row.paid_amount ?? 0)
+          if (remaining > 0) creditOutstanding += remaining
+        }
+      }
+    } catch (e) {
+      console.log('Credit query error:', e)
+    }
+
     // ── Opening stock via accounting identity ───────────────────────────
     // Opening = Closing − Restocked + Sold(COGS) + Damaged
     const openingStock = closingStock - restockStockValue + cogs + damagedLoss
@@ -448,7 +468,8 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
 
     // ── Closing cash: accounts for actual cash paid out ─────────────────
     const closingCash = openingCash + totalRevenue - expenses - restockCash
-    const currentCapital = closingCash + closingStock
+    // Capital = Assets (Cash + Stock) minus Liabilities (Credit Owed)
+    const currentCapital = closingCash + closingStock - creditOutstanding
 
     return {
       openingCash,
@@ -466,6 +487,7 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
       damagedLoss,
       closingCash,
       closingStock,
+      creditOutstanding,
       currentCapital,
       cashChange: closingCash - openingCash,
       stockChange: closingStock - openingStock,
@@ -778,7 +800,7 @@ export default function AccountingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             <MetricCard label="Opening Capital" value={data.openingCapital} color="slate" sub={`Cash ${fmtShort(data.openingCash)} + Stock ${fmtShort(data.openingStock)}`} />
             <MetricCard label="Total Revenue" value={data.totalRevenue} color="blue" sub={`${fmtPct(data.retailShare)} retail`} />
-            <MetricCard label="Gross Profit" value={data.grossProfit} color="emerald" sub={`Margin: ${fmtPct(data.grossMargin)}`} />
+            <MetricCard label="Credit Outstanding" value={data.creditOutstanding} color={data.creditOutstanding > 0 ? 'red' : 'emerald'} sub={data.creditOutstanding > 0 ? 'Owed to suppliers' : 'No pending credits'} />
             <MetricCard
               label="Net Profit"
               value={data.netProfit}
@@ -794,7 +816,7 @@ export default function AccountingPage() {
               value={data.currentCapital}
               color="purple"
               highlight
-              sub={`Cash ${fmtShort(data.closingCash)} + Stock ${fmtShort(data.closingStock)}`}
+              sub={data.creditOutstanding > 0 ? `Cash + Stock − ${fmtShort(data.creditOutstanding)} credit` : `Cash ${fmtShort(data.closingCash)} + Stock ${fmtShort(data.closingStock)}`}
               trend={data.capitalChange}
             />
           </div>
@@ -850,14 +872,20 @@ export default function AccountingPage() {
                 <span className="text-amber-600 dark:text-amber-400">{fmt(data.closingCash)}</span>
                 <span>+</span>
                 <span className="text-emerald-600 dark:text-emerald-400">{fmt(data.closingStock)}</span>
+                {data.creditOutstanding > 0 && (
+                  <>
+                    <span>−</span>
+                    <span className="text-red-500 dark:text-red-400">{fmt(data.creditOutstanding)}</span>
+                  </>
+                )}
                 <span
                   className={
-                    Math.abs(data.currentCapital - data.closingCash - data.closingStock) < 1
+                    Math.abs(data.currentCapital - (data.closingCash + data.closingStock - data.creditOutstanding)) < 1
                       ? 'text-emerald-600 dark:text-emerald-400 font-bold'
                       : 'text-amber-600 dark:text-amber-400 font-bold'
                   }
                 >
-                  {Math.abs(data.currentCapital - data.closingCash - data.closingStock) < 1 ? '✓ Balanced' : '⚠ Check figures'}
+                  {Math.abs(data.currentCapital - (data.closingCash + data.closingStock - data.creditOutstanding)) < 1 ? '✓ Balanced' : '⚠ Check figures'}
                 </span>
               </div>
             </div>
