@@ -3,19 +3,21 @@ import { settingsApi } from '../../lib/updatesApi'
 import { Settings as SettingsIcon, Save } from 'lucide-react'
 import toast from 'react-hot-toast'
 
+const DEFAULT_SETTINGS = {
+  printer_enabled: false,
+  automatic_backup: false,
+  notification_enabled: true,
+  tax_calculation_enabled: false,
+  low_stock_alert_enabled: true,
+  discount_approval_required: false,
+}
+
 export default function SettingsPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
   // Toggle settings
-  const [settings, setSettings] = useState({
-    printer_enabled: false,
-    automatic_backup: false,
-    notification_enabled: true,
-    tax_calculation_enabled: false,
-    low_stock_alert_enabled: true,
-    discount_approval_required: false,
-  })
+  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -24,9 +26,9 @@ export default function SettingsPage() {
       const allSettings = await settingsApi.getAll()
       const loaded: Record<string, boolean> = {}
 
-      for (const [key] of Object.entries(settings)) {
+      for (const [key] of Object.entries(DEFAULT_SETTINGS)) {
         const setting = allSettings.find(s => s.setting_key === key)
-        loaded[key] = setting?.setting_value?.enabled ?? settings[key as keyof typeof settings]
+        loaded[key] = setting?.setting_value?.enabled ?? DEFAULT_SETTINGS[key as keyof typeof DEFAULT_SETTINGS]
       }
 
       setSettings(prev => ({ ...prev, ...loaded }))
@@ -36,7 +38,7 @@ export default function SettingsPage() {
     } finally {
       setLoading(false)
     }
-  }, [settings])
+  }, [])
 
   useEffect(() => {
     load()
