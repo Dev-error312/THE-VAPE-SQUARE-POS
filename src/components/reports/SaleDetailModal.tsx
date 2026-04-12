@@ -133,7 +133,7 @@ export default function SaleDetailModal({ isOpen, onClose, sale }: SaleDetailMod
         {/* Printable invoice — always shows only customer-facing info */}
         <div ref={invoiceRef} className="bg-white text-black rounded-xl p-5 font-mono text-xs leading-relaxed">
           <div style={{ textAlign: 'center', marginBottom: 8 }}>
-            <div style={{ fontWeight: 'bold', fontSize: 16 }}>{user?.business_name || 'The Vape Square'}</div>
+            <div style={{ fontWeight: 'bold', fontSize: 16 }}>{user?.business_name || 'Square Hotel'}</div>
             <div style={{ fontSize: 11 }}>Point of Sale System</div>
             <div style={{ borderTop: '1px dashed #000', margin: '6px 0' }} />
           </div>

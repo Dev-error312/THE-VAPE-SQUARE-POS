@@ -5,7 +5,9 @@ import { purchasesApi } from '../../lib/productsApi'
 import type { RestockRecord } from '../../lib/productsApi'
 import { useRefreshStore } from '../../store/refreshStore'
 import { useIsAdmin } from '../../hooks/useRole'
+import { useSettings } from '../../hooks/useSettings'
 import { formatCurrency, formatDate } from '../../utils'
+import { adToBS, bsToAD, getDaysInBS } from '../../utils/dateConverter'
 import type { Sale } from '../../types'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
@@ -35,6 +37,9 @@ const restockBadgeCls = (type: string) => {
 }
 
 export default function ReportsPage() {
+  const { settings } = useSettings()
+  const dateFormat = settings?.date_format ?? 'AD'
+
   const today = new Date().toISOString().slice(0, 10)
 
   // ── date range — defaults to Today on first load ─────────────────────
@@ -323,21 +328,62 @@ export default function ReportsPage() {
   }
 
   // ─────────────────────────────────────────────────────────────────────────
-  // PRESETS
+  // PRESETS — Calendar-aware date preset calculations
   // ─────────────────────────────────────────────────────────────────────────
-  const getPresets = () => {
-    const now = new Date()
-    const todayStr = now.toISOString().slice(0, 10)
-    const monthStartStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-    const monthEndStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
-    const weekStart = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)
-    return [
-      { label: 'Today',      start: todayStr, end: todayStr },
-      { label: 'This Week',  start: weekStart, end: todayStr },
-      { label: 'This Month', start: monthStartStr, end: monthEndStr },
-    ]
-  }
-  const PRESETS = getPresets()
+  const getPresets = useCallback(() => {
+    if (dateFormat === 'BS') {
+      // Calculate dates in BS calendar, then convert to AD for storage
+      const todayAD = new Date()
+      const todayBS = adToBS(todayAD)
+
+      // Today in BS → convert back to AD for storage
+      const todayADStr = bsToAD({ year: todayBS.year, month: todayBS.month, day: todayBS.day })
+        .toISOString().slice(0, 10)
+
+      // This week in BS: 6 days before today in BS
+      const weekStartBS = { ...todayBS }
+      weekStartBS.day -= 6
+      if (weekStartBS.day <= 0) {
+        weekStartBS.day += getDaysInBS(weekStartBS.year, weekStartBS.month)
+        weekStartBS.month -= 1
+        if (weekStartBS.month <= 0) {
+          weekStartBS.month = 12
+          weekStartBS.year -= 1
+        }
+      }
+      const weekStartADStr = bsToAD(weekStartBS).toISOString().slice(0, 10)
+
+      // This month in BS: from 1st to last day of current BS month
+      const monthStartBS = { year: todayBS.year, month: todayBS.month, day: 1 }
+      const monthEndBS = {
+        year: todayBS.year,
+        month: todayBS.month,
+        day: getDaysInBS(todayBS.year, todayBS.month),
+      }
+      const monthStartADStr = bsToAD(monthStartBS).toISOString().slice(0, 10)
+      const monthEndADStr = bsToAD(monthEndBS).toISOString().slice(0, 10)
+
+      return [
+        { label: 'Today',      start: todayADStr, end: todayADStr },
+        { label: 'This Week',  start: weekStartADStr, end: todayADStr },
+        { label: 'This Month', start: monthStartADStr, end: monthEndADStr },
+      ]
+    } else {
+      // AD calendar (default) — original logic
+      const now = new Date()
+      const todayStr = now.toISOString().slice(0, 10)
+      const monthStartStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+      const monthEndStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+      const weekStart = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)
+      return [
+        { label: 'Today',      start: todayStr, end: todayStr },
+        { label: 'This Week',  start: weekStart, end: todayStr },
+        { label: 'This Month', start: monthStartStr, end: monthEndStr },
+      ]
+    }
+  }, [dateFormat])
+
+  const PRESETS = useMemo(() => getPresets(), [getPresets])
 
   // ─────────────────────────────────────────────────────────────────────────
   // RENDER
@@ -393,6 +439,7 @@ export default function ReportsPage() {
         <div className="flex flex-wrap gap-2 items-center">
           {PRESETS.map(p => {
             const isActive = selectedPreset === p.label
+            const displayLabel = dateFormat === 'BS' ? `${p.label} (BS)` : p.label
             return (
               <button
                 key={p.label}
@@ -403,7 +450,7 @@ export default function ReportsPage() {
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700'
                 }`}
               >
-                {p.label}
+                {displayLabel}
               </button>
             )
           })}

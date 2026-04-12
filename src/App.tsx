@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import { useEffect } from 'react'
 import { useAuthStore } from './store/authStore'
+import { SettingsProvider } from './context/SettingsContext'
 
 import AuthPage from './components/auth/AuthPage'
 import RegisterBusinessPage from './components/auth/RegisterBusinessPage'
@@ -60,7 +61,8 @@ export default function App() {
           error:   { iconTheme: { primary: '#ef4444', secondary: '#fff' } },
         }}
       />
-      <Routes>
+      <SettingsProvider>
+        <Routes>
         <Route path="/login"          element={<AuthPage />} />
         <Route path="/register"       element={<RegisterBusinessPage />} />
         <Route path="/auth-callback"  element={<AuthCallbackPage />} />
@@ -86,6 +88,7 @@ export default function App() {
         <Route path="/admin/updates" element={adminWrap(<UpdatesAdminPage />)} />
         <Route path="*"          element={<Navigate to="/dashboard" replace />} />
       </Routes>
+      </SettingsProvider>
     </BrowserRouter>
   )
 }

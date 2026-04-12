@@ -237,13 +237,16 @@ export const settingsApi = {
     const businessId = getBusinessId()
     const { data, error } = await supabase
       .from('business_settings')
-      .upsert({
-        business_id: businessId,
-        setting_key: settingKey,
-        setting_value: settingValue,
-        description,
-        updated_at: new Date().toISOString(),
-      })
+      .upsert(
+        {
+          business_id: businessId,
+          setting_key: settingKey,
+          setting_value: settingValue,
+          description,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'business_id,setting_key' }
+      )
       .select()
       .single()
     if (error) throw new Error(`Failed to save setting: ${error.message}`)

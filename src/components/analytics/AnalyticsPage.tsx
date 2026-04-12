@@ -2,7 +2,9 @@ import { useState, useCallback, useMemo, useEffect } from 'react'
 import { salesApi } from '../../lib/salesApi'
 import { expensesApi, damagedApi } from '../../lib/expensesApi'
 import { wholesaleApi } from '../../lib/wholesaleApi'
+import { useSettings } from '../../hooks/useSettings'
 import { formatCurrency, formatDate } from '../../utils'
+import { adToBS, bsToAD, getDaysInBS } from '../../utils/dateConverter'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend
@@ -38,6 +40,9 @@ interface PaymentTotals {
 }
 
 export default function AnalyticsPage() {
+  const { settings } = useSettings()
+  const dateFormat = settings?.date_format ?? 'AD'
+
   const todayStr = new Date().toISOString().slice(0, 10)
   const monthStartStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
 
@@ -60,12 +65,63 @@ export default function AnalyticsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salesVersion])
 
-  const monthEndStr = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10)
-  const PRESETS = [
-    { label: 'Today',      start: todayStr, end: todayStr },
-    { label: 'This Week',  start: new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10), end: todayStr },
-    { label: 'This Month', start: monthStartStr, end: monthEndStr },
-  ]
+  // ─────────────────────────────────────────────────────────────────────────
+  // PRESETS — Calendar-aware date preset calculations
+  // ─────────────────────────────────────────────────────────────────────────
+  const getPresets = useCallback(() => {
+    if (dateFormat === 'BS') {
+      // Calculate dates in BS calendar, then convert to AD for storage
+      const todayAD = new Date()
+      const todayBS = adToBS(todayAD)
+
+      // Today in BS → convert back to AD for storage
+      const todayADStr = bsToAD({ year: todayBS.year, month: todayBS.month, day: todayBS.day })
+        .toISOString().slice(0, 10)
+
+      // This week in BS: 6 days before today in BS
+      const weekStartBS = { ...todayBS }
+      weekStartBS.day -= 6
+      if (weekStartBS.day <= 0) {
+        weekStartBS.day += getDaysInBS(weekStartBS.year, weekStartBS.month)
+        weekStartBS.month -= 1
+        if (weekStartBS.month <= 0) {
+          weekStartBS.month = 12
+          weekStartBS.year -= 1
+        }
+      }
+      const weekStartADStr = bsToAD(weekStartBS).toISOString().slice(0, 10)
+
+      // This month in BS: from 1st to last day of current BS month
+      const monthStartBS = { year: todayBS.year, month: todayBS.month, day: 1 }
+      const monthEndBS = {
+        year: todayBS.year,
+        month: todayBS.month,
+        day: getDaysInBS(todayBS.year, todayBS.month),
+      }
+      const monthStartADStr = bsToAD(monthStartBS).toISOString().slice(0, 10)
+      const monthEndADStr = bsToAD(monthEndBS).toISOString().slice(0, 10)
+
+      return [
+        { label: 'Today',      start: todayADStr, end: todayADStr },
+        { label: 'This Week',  start: weekStartADStr, end: todayADStr },
+        { label: 'This Month', start: monthStartADStr, end: monthEndADStr },
+      ]
+    } else {
+      // AD calendar (default) — original logic
+      const now = new Date()
+      const todayStr = now.toISOString().slice(0, 10)
+      const monthStartStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+      const monthEndStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
+      const weekStart = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)
+      return [
+        { label: 'Today',      start: todayStr, end: todayStr },
+        { label: 'This Week',  start: weekStart, end: todayStr },
+        { label: 'This Month', start: monthStartStr, end: monthEndStr },
+      ]
+    }
+  }, [dateFormat])
+
+  const PRESETS = useMemo(() => getPresets(), [getPresets])
 
   const load = useCallback(async () => {
     if (!startDate || !endDate) { toast.error('Select a date range'); return }
@@ -210,17 +266,21 @@ export default function AnalyticsPage() {
           </button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {PRESETS.map(p => (
+          {PRESETS.map(p => {
+            const displayLabel = dateFormat === 'BS' ? `${p.label} (BS)` : p.label
+            return (
             <button key={p.label}
               onClick={() => { setStartDate(p.start); setEndDate(p.end); setSelectedPreset(p.label) }}
               className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${
                 selectedPreset === p.label
                   ? 'bg-primary-600 text-white'
                   : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}>
-              {p.label}
+              }`}
+            >
+              {displayLabel}
             </button>
-          ))}
+            )
+          })}
         </div>
       </div>
 

@@ -5,40 +5,27 @@ export function round2(n: number): number {
   return Math.round(n * 100) / 100
 }
 
-// ─── Currency formatting ───────────────────────────────────────────────────
+// ─── Currency & Date Formatting ────────────────────────────────────────────
+// These are now DYNAMIC and respect business settings (currency, date format)
+// Re-exported from dynamicFormatters.ts
 //
-// Uses en-IN locale → produces Nepali/Indian lakh system:
-//   175000  →  रु 1,75,000
-//   24500   →  रु 24,500
-//   1000    →  रु 1,000
+// Example:
+//   formatCurrency(175000) → "₨ 1,75,000" (NPR) or "$ 175,000" (USD)
+//   formatDate('2025-06-12') → "12 Jun 2025" (AD) or "29 जेष्ठ 2082" (BS)
 //
+export {
+  formatCurrency,
+  formatCurrencyDecimal,
+  formatDate,
+  formatDateTime,
+} from './dynamicFormatters'
+
+// ─── Legacy utilities ──────────────────────────────────────────────────────
+
 const CURRENCY_FORMATTER = new Intl.NumberFormat('en-IN', {
   maximumFractionDigits: 0,
   minimumFractionDigits: 0,
 })
-
-const CURRENCY_FORMATTER_DECIMAL = new Intl.NumberFormat('en-IN', {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-})
-
-/**
- * Primary currency display. Rounds to nearest rupee.
- * 175000  →  "रु 1,75,000"
- */
-export function formatCurrency(amount: number): string {
-  if (!isFinite(amount)) return 'रु 0'
-  return 'रु ' + CURRENCY_FORMATTER.format(Math.round(amount))
-}
-
-/**
- * Currency with 2 decimal places — use only where paisa precision is needed.
- * 175000.50  →  "रु 1,75,000.50"
- */
-export function formatCurrencyDecimal(amount: number): string {
-  if (!isFinite(amount)) return 'रु 0.00'
-  return 'रु ' + CURRENCY_FORMATTER_DECIMAL.format(amount)
-}
 
 /**
  * Raw number formatted with lakh commas (no currency prefix).
@@ -46,40 +33,6 @@ export function formatCurrencyDecimal(amount: number): string {
  */
 export function formatNumber(value: number): string {
   return CURRENCY_FORMATTER.format(Math.round(value))
-}
-
-// ─── Date formatting ───────────────────────────────────────────────────────
-//
-// All dates use 'en-CA' locale internally (YYYY-MM-DD) so Supabase
-// filters stay correct at UTC+5:45 (Nepal timezone).
-
-/**
- * Short date: "12 Jun 2025"
- */
-export function formatDate(isoString: string | null | undefined): string {
-  if (!isoString) return '—'
-  try {
-    return new Date(isoString).toLocaleDateString('en-US', {
-      day: '2-digit', month: 'short', year: 'numeric',
-    })
-  } catch {
-    return '—'
-  }
-}
-
-/**
- * Date + time: "12 Jun 2025, 02:30 PM"
- */
-export function formatDateTime(isoString: string | null | undefined): string {
-  if (!isoString) return '—'
-  try {
-    return new Date(isoString).toLocaleString('en-US', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: true,
-    })
-  } catch {
-    return '—'
-  }
 }
 
 /**
