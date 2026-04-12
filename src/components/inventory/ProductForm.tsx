@@ -3,10 +3,11 @@ import Modal from '../shared/Modal'
 import { productsApi, categoriesApi, suppliersApi } from '../../lib/productsApi'
 import { batchesApi } from '../../lib/productsApi'
 import type { Product, Category } from '../../types'
-import { Plus } from 'lucide-react'
+import { Plus, Barcode } from 'lucide-react'
 import { generateBatchNumber } from '../../utils'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '../../store/authStore'
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner'
 
 interface ProductFormProps {
   isOpen: boolean
@@ -24,7 +25,7 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
 
   const [form, setForm] = useState({
     name: '', brand: '', category_id: '', supplier_name: '',
-    selling_price: '', cost_price: '', unit: 'pcs', description: '', stock_adjustment: '',
+    selling_price: '', cost_price: '', unit: 'pcs', description: '', stock_adjustment: '', barcode: '',
   })
   const [categories, setCategories] = useState<Category[]>([])
   const [newCategory, setNewCategory] = useState('')
@@ -33,6 +34,25 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
   const [catLoading, setCatLoading] = useState(false)
   const [addingCat, setAddingCat] = useState(false)
   const [allProducts, setAllProducts] = useState<Product[]>([])
+  const [scanMode, setScanMode] = useState(false)
+
+  useBarcodeScanner({
+    enabled: scanMode,
+    onScan: async (barcode) => {
+      if (!barcode.trim()) return
+      // Check if barcode is already assigned to a different product
+      const existing = allProducts.find(p => p.barcode === barcode && p.id !== product?.id)
+      if (existing) {
+        toast.error(`Barcode already assigned to: ${existing.name}`)
+        return
+      }
+      set('barcode', barcode)
+      toast.success('Barcode scanned!')
+      setScanMode(false)
+    },
+    minLength: 3,
+    scanDelay: 50,
+  })
 
   useEffect(() => {
     if (!isOpen) return
@@ -56,11 +76,12 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
         cost_price: product.avg_cost ? String(product.avg_cost) : '',
         unit: product.unit || 'pcs', description: product.description || '',
         stock_adjustment: String(product.total_stock || 0),
+        barcode: product.barcode || '',
       })
     } else {
-      setForm({ name: '', brand: '', category_id: '', supplier_name: '', selling_price: '', cost_price: '', unit: 'pcs', description: '', stock_adjustment: '' })
+      setForm({ name: '', brand: '', category_id: '', supplier_name: '', selling_price: '', cost_price: '', unit: 'pcs', description: '', stock_adjustment: '', barcode: '' })
     }
-    setShowNewCat(false); setNewCategory('')
+    setShowNewCat(false); setNewCategory(''); setScanMode(false)
   }, [product, isOpen])
 
   const set = (field: string, value: string) => setForm(f => ({ ...f, [field]: value }))
@@ -125,6 +146,7 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
           cost_price: costPrice,
           unit: form.unit,
           description: form.description.trim() || undefined,
+          barcode: form.barcode.trim() || undefined,
         })
 
         // Absolute stock quantity update — only if the value differs from current
@@ -172,6 +194,7 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
           category_id: form.category_id || null,
           supplier_id: resolvedSupplierId,
           selling_price: 0, unit: 'pcs', is_active: true,
+          barcode: form.barcode.trim() || undefined,
         })
         toast.success('Product added — use Restock to set price and stock')
       }
@@ -229,6 +252,23 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
           <input className="input" type="text" value={form.supplier_name}
             onChange={e => set('supplier_name', e.target.value)}
             placeholder="Type supplier name (auto-creates if new)" />
+        </div>
+
+        {/* Barcode — available in both add and edit mode */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="label mb-0">Barcode (Optional)</label>
+            <button type="button" onClick={() => setScanMode(v => !v)}
+              className={`text-xs flex items-center gap-1 transition-colors px-2 py-1 rounded ${scanMode ? 'text-primary-400 bg-primary-500/10' : 'text-slate-500 hover:text-primary-400'}`}>
+              {scanMode ? '✓ Scan Active' : '📱 Scan to fill'}
+            </button>
+          </div>
+          <div className="relative">
+            <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input className="input pl-10" type="text" value={form.barcode}
+              onChange={e => set('barcode', e.target.value)}
+              placeholder="Scan or type barcode..." />
+          </div>
         </div>
 
         {/* Edit-only fields */}

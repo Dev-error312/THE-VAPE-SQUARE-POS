@@ -1,18 +1,21 @@
 import { useEffect, useState, useCallback } from 'react'
-import { ShoppingCart, X } from 'lucide-react'
+import { ShoppingCart, X, Barcode } from 'lucide-react'
 import { productsApi } from '../../lib/productsApi'
 import { useCartStore } from '../../store/cartStore'
 import { formatCurrency } from '../../utils'
+import { useBarcodeScanner } from '../../hooks/useBarcodeScanner'
 import type { Product } from '../../types'
 import ProductGrid from './ProductGrid'
 import CartPanel from './CartPanel'
 import CheckoutModal from './CheckoutModal'
+import toast from 'react-hot-toast'
 
 export default function POSPage() {
   const [products, setProducts]       = useState<Product[]>([])
   const [loading, setLoading]         = useState(true)
   const [showCheckout, setShowCheckout] = useState(false)
   const [showMobileCart, setShowMobileCart] = useState(false)
+  const [barcodeInput, setBarcodeInput] = useState('')
 
   // Cart summary for floating button
   const cartItemCount = useCartStore(s => s.items.reduce((sum, i) => sum + i.quantity, 0))
@@ -30,6 +33,45 @@ export default function POSPage() {
 
   useEffect(() => { loadProducts() }, [loadProducts])
 
+  // Barcode scanner hook (always active)
+  useBarcodeScanner({
+    enabled: true,
+    onScan: async (barcode) => {
+      await handleBarcodeScan(barcode)
+    },
+    minLength: 3,
+    scanDelay: 50,
+  })
+
+  // Handle barcode lookup and add to cart
+  const handleBarcodeScan = async (barcode: string) => {
+    if (!barcode.trim()) return
+    try {
+      const product = await productsApi.getByBarcode(barcode, 'pos_sale')
+      if (!product) {
+        toast.error('Product not found. Please add it to inventory first.')
+        return
+      }
+      const stock = product.total_stock || 0
+      if (stock === 0) {
+        toast.error(`${product.name} is out of stock`)
+        return
+      }
+      useCartStore.getState().addItem(product)
+      toast.success(`${product.name} added to cart`)
+      setBarcodeInput('') // Clear manual input if used
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Failed to add product')
+    }
+  }
+
+  // Handle manual barcode input (from visible input field)
+  const handleBarcodeInputSubmit = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key !== 'Enter') return
+    e.preventDefault()
+    await handleBarcodeScan(barcodeInput)
+  }
+
   // Close mobile cart when checkout opens
   const handleCheckout = () => {
     setShowMobileCart(false)
@@ -40,9 +82,23 @@ export default function POSPage() {
     <div className="flex h-full relative">
       {/* ── Product Grid (always visible) ─────────────────────────────── */}
       <div className="flex-1 bg-slate-50 dark:bg-slate-950 border-r border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col min-w-0">
-        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-          <h1 className="text-lg font-bold text-slate-900 dark:text-white">Point of Sale</h1>
-          <p className="text-xs text-slate-600 dark:text-slate-400">Select products to add to cart</p>
+        <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800 space-y-2">
+          <div>
+            <h1 className="text-lg font-bold text-slate-900 dark:text-white">Point of Sale</h1>
+            <p className="text-xs text-slate-600 dark:text-slate-400">Select products to add to cart</p>
+          </div>
+          {/* Barcode input bar for manual entry */}
+          <div className="relative">
+            <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+            <input
+              type="text"
+              value={barcodeInput}
+              onChange={e => setBarcodeInput(e.target.value)}
+              onKeyDown={handleBarcodeInputSubmit}
+              placeholder="Scan barcode or type and press Enter..."
+              className="input pl-10 py-2 text-sm"
+            />
+          </div>
         </div>
         <div className="flex-1 overflow-hidden">
           <ProductGrid products={products} loading={loading} />

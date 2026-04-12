@@ -199,6 +199,92 @@ export const productsApi = {
     })
   },
 
+  /**
+   * Look up a product by barcode.
+   * Logs the scan attempt to barcode_scan_logs for analytics.
+   * 
+   * @param barcode The barcode string to search for
+   * @param scanType The type of scan: 'inventory_lookup' or 'pos_sale'
+   * @returns Product object if found, null otherwise (never throws)
+   */
+  async getByBarcode(barcode: string, scanType: 'inventory_lookup' | 'pos_sale'): Promise<Product | null> {
+    const businessId = getBusinessId()
+    
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          id, name, brand, category_id, supplier_id, selling_price, unit, description,
+          is_active, created_at, updated_at, barcode, barcode_type,
+          categories ( id, name ),
+          suppliers ( id, name ),
+          inventory_batches ( quantity_remaining, cost_price )
+        `)
+        .eq('business_id', businessId)
+        .eq('barcode', barcode)
+        .eq('is_active', true)
+        .limit(1)
+        .single()
+
+      let product: Product | null = null
+      if (!error && data) {
+        const batches = (data.inventory_batches || []) as { quantity_remaining: number; cost_price: number }[]
+        const totalStock = batches.reduce((s, b) => s + b.quantity_remaining, 0)
+        const avgCost = totalStock > 0
+          ? batches.reduce((s, b) => s + b.cost_price * b.quantity_remaining, 0) / totalStock : 0
+        product = {
+          id: data.id,
+          name: data.name,
+          brand: data.brand || '',
+          category_id: data.category_id,
+          category_name: (data.categories as unknown as { id: string; name: string } | null)?.name || '',
+          supplier_id: data.supplier_id,
+          supplier_name: (data.suppliers as unknown as { id: string; name: string } | null)?.name || '',
+          selling_price: data.selling_price,
+          unit: data.unit,
+          description: data.description,
+          is_active: data.is_active,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          barcode: data.barcode,
+          barcode_type: data.barcode_type,
+          total_stock: totalStock,
+          avg_cost: round2(avgCost),
+        }
+      }
+
+      // Log the scan attempt (async, non-blocking)
+      this._logBarcodeScan(businessId, barcode, scanType, product?.id || null, product ? 'found' : 'not_found').catch(() => {})
+
+      return product
+    } catch {
+      return null
+    }
+  },
+
+  /**
+   * Internal helper to log barcode scans (async, non-blocking)
+   */
+  async _logBarcodeScan(
+    businessId: string,
+    barcode: string,
+    scanType: 'inventory_lookup' | 'pos_sale',
+    productId: string | null,
+    result: 'found' | 'not_found'
+  ): Promise<void> {
+    try {
+      await supabase.from('barcode_scan_logs').insert({
+        business_id: businessId,
+        barcode,
+        scan_type: scanType,
+        product_id: productId,
+        result,
+      })
+    } catch {
+      // Silently fail — logging errors never break the main flow
+    }
+  },
+
   async create(product: {
     name: string
     brand?: string
@@ -208,6 +294,7 @@ export const productsApi = {
     unit: string
     description?: string
     is_active: boolean
+    barcode?: string
   }): Promise<Product> {
     const businessId = getBusinessId()
     const { data, error } = await supabase.from('products').insert({
@@ -227,6 +314,7 @@ export const productsApi = {
     cost_price?: number
     unit?: string
     description?: string
+    barcode?: string
   }): Promise<Product> {
     const businessId = getBusinessId()
     

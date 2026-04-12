@@ -42,6 +42,8 @@ export interface Product {
   updated_at: string
   total_stock?: number
   avg_cost?: number
+  barcode?: string
+  barcode_type?: string
 }
 
 export interface InventoryBatch {
