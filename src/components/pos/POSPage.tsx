@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { ShoppingCart, X, Barcode } from 'lucide-react'
 import { productsApi } from '../../lib/productsApi'
 import { useCartStore } from '../../store/cartStore'
+import { useSettings } from '../../hooks/useSettings'
 import { formatCurrency } from '../../utils'
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner'
 import type { Product } from '../../types'
@@ -16,6 +17,7 @@ export default function POSPage() {
   const [showCheckout, setShowCheckout] = useState(false)
   const [showMobileCart, setShowMobileCart] = useState(false)
   const [barcodeInput, setBarcodeInput] = useState('')
+  const { settings } = useSettings()
 
   // Cart summary for floating button
   const cartItemCount = useCartStore(s => s.items.reduce((sum, i) => sum + i.quantity, 0))
@@ -33,9 +35,9 @@ export default function POSPage() {
 
   useEffect(() => { loadProducts() }, [loadProducts])
 
-  // Barcode scanner hook (always active)
+  // Barcode scanner hook (only enabled if barcode_scanner_enabled setting is true)
   useBarcodeScanner({
-    enabled: true,
+    enabled: settings.barcode_scanner_enabled,
     onScan: async (barcode) => {
       await handleBarcodeScan(barcode)
     },
@@ -87,18 +89,20 @@ export default function POSPage() {
             <h1 className="text-lg font-bold text-slate-900 dark:text-white">Point of Sale</h1>
             <p className="text-xs text-slate-600 dark:text-slate-400">Select products to add to cart</p>
           </div>
-          {/* Barcode input bar for manual entry */}
-          <div className="relative">
-            <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-            <input
-              type="text"
-              value={barcodeInput}
-              onChange={e => setBarcodeInput(e.target.value)}
-              onKeyDown={handleBarcodeInputSubmit}
-              placeholder="Scan barcode or type and press Enter..."
-              className="input pl-10 py-2 text-sm"
-            />
-          </div>
+          {/* Barcode input bar (only shown if barcode_scanner_enabled is true) */}
+          {settings.barcode_scanner_enabled && (
+            <div className="relative">
+              <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+              <input
+                type="text"
+                value={barcodeInput}
+                onChange={e => setBarcodeInput(e.target.value)}
+                onKeyDown={handleBarcodeInputSubmit}
+                placeholder="Scan barcode or type and press Enter..."
+                className="input pl-10 py-2 text-sm"
+              />
+            </div>
+          )}
         </div>
         <div className="flex-1 overflow-hidden">
           <ProductGrid products={products} loading={loading} />

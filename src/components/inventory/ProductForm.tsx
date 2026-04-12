@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Modal from '../shared/Modal'
 import { productsApi, categoriesApi, suppliersApi } from '../../lib/productsApi'
 import { batchesApi } from '../../lib/productsApi'
+import { useSettings } from '../../hooks/useSettings'
 import type { Product, Category } from '../../types'
 import { Plus, Barcode } from 'lucide-react'
 import { generateBatchNumber } from '../../utils'
@@ -21,6 +22,7 @@ const OTHERS = ['others', 'other', 'अन्य']
 
 export default function ProductForm({ isOpen, onClose, product, onSaved }: ProductFormProps) {
   const isEdit = !!product
+  const { settings } = useSettings()
   const { user } = useAuthStore()
 
   const [form, setForm] = useState({
@@ -37,7 +39,7 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
   const [scanMode, setScanMode] = useState(false)
 
   useBarcodeScanner({
-    enabled: scanMode,
+    enabled: scanMode && settings.barcode_scanner_enabled,
     onScan: async (barcode) => {
       if (!barcode.trim()) return
       // Check if barcode is already assigned to a different product
@@ -254,22 +256,24 @@ export default function ProductForm({ isOpen, onClose, product, onSaved }: Produ
             placeholder="Type supplier name (auto-creates if new)" />
         </div>
 
-        {/* Barcode — available in both add and edit mode */}
-        <div>
-          <div className="flex items-center justify-between mb-1">
-            <label className="label mb-0">Barcode (Optional)</label>
-            <button type="button" onClick={() => setScanMode(v => !v)}
-              className={`text-xs flex items-center gap-1 transition-colors px-2 py-1 rounded ${scanMode ? 'text-primary-400 bg-primary-500/10' : 'text-slate-500 hover:text-primary-400'}`}>
-              {scanMode ? '✓ Scan Active' : '📱 Scan to fill'}
-            </button>
+        {/* Barcode — available in both add and edit mode (only if setting is enabled) */}
+        {settings.barcode_scanner_enabled && (
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className="label mb-0">Barcode (Optional)</label>
+              <button type="button" onClick={() => setScanMode(v => !v)}
+                className={`text-xs flex items-center gap-1 transition-colors px-2 py-1 rounded ${scanMode ? 'text-primary-400 bg-primary-500/10' : 'text-slate-500 hover:text-primary-400'}`}>
+                {scanMode ? '✓ Scan Active' : '📱 Scan to fill'}
+              </button>
+            </div>
+            <div className="relative">
+              <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <input className="input pl-10" type="text" value={form.barcode}
+                onChange={e => set('barcode', e.target.value)}
+                placeholder="Scan or type barcode..." />
+            </div>
           </div>
-          <div className="relative">
-            <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input className="input pl-10" type="text" value={form.barcode}
-              onChange={e => set('barcode', e.target.value)}
-              placeholder="Scan or type barcode..." />
-          </div>
-        </div>
+        )}
 
         {/* Edit-only fields */}
         {isEdit && (

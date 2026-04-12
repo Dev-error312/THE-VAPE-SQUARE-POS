@@ -10,6 +10,7 @@ export interface BusinessSettings {
   date_format: 'AD' | 'BS'
   currency: 'NPR' | 'USD'
   printer_enabled: boolean
+  barcode_scanner_enabled: boolean
   automatic_backup: boolean
   notification_enabled: boolean
   tax_calculation_enabled: boolean
@@ -21,6 +22,7 @@ const DEFAULT_SETTINGS: BusinessSettings = {
   date_format: 'AD',
   currency: 'NPR',
   printer_enabled: false,
+  barcode_scanner_enabled: true,
   automatic_backup: false,
   notification_enabled: true,
   tax_calculation_enabled: false,

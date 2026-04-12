@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { productsApi, categoriesApi, suppliersApi } from '../../lib/productsApi'
 import { useIsAdmin } from '../../hooks/useRole'
+import { useSettings } from '../../hooks/useSettings'
 import { useBarcodeScanner } from '../../hooks/useBarcodeScanner'
 import type { Product, Category, Supplier } from '../../types'
 import { formatCurrency } from '../../utils'
@@ -35,9 +36,10 @@ export default function InventoryPage() {
   const [scanMode, setScanMode] = useState(false)
 
   const isAdmin = useIsAdmin()
+  const { settings } = useSettings()
 
   useBarcodeScanner({
-    enabled: scanMode,
+    enabled: scanMode && settings.barcode_scanner_enabled,
     onScan: async (barcode) => {
       if (!barcode.trim()) return
       const product = await productsApi.getByBarcode(barcode, 'inventory_lookup')
@@ -187,11 +189,13 @@ export default function InventoryPage() {
           <input className="input pl-9" placeholder="Search name or brand..."
             value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        <button onClick={() => setScanMode(v => !v)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-sm font-medium flex-shrink-0 ${scanMode ? 'bg-primary-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>
-          <span className={`w-2 h-2 rounded-full ${scanMode ? 'bg-green-400 animate-pulse' : 'bg-slate-400'}`} />
-          🔍 {scanMode ? 'Scan Active' : 'Scan'}
-        </button>
+        {settings.barcode_scanner_enabled && (
+          <button onClick={() => setScanMode(v => !v)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-all text-sm font-medium flex-shrink-0 ${scanMode ? 'bg-primary-600 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'}`}>
+            <span className={`w-2 h-2 rounded-full ${scanMode ? 'bg-green-400 animate-pulse' : 'bg-slate-400'}`} />
+            🔍 {scanMode ? 'Scan Active' : 'Scan'}
+          </button>
+        )}
         <select className="input sm:w-44" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
           <option value="">All Categories</option>
           {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}

@@ -7,6 +7,7 @@ import { setGlobalFormatSettings } from '../../utils/dynamicFormatters'
 
 interface BusinessSettings {
   printer_enabled: boolean
+  barcode_scanner_enabled: boolean
   automatic_backup: boolean
   notification_enabled: boolean
   tax_calculation_enabled: boolean
@@ -18,6 +19,7 @@ interface BusinessSettings {
 
 const DEFAULT_SETTINGS: BusinessSettings = {
   printer_enabled: false,
+  barcode_scanner_enabled: true,
   automatic_backup: false,
   notification_enabled: true,
   tax_calculation_enabled: false,
@@ -158,6 +160,13 @@ export default function SettingsPage() {
           label: 'Enable Printer',
           description: 'Automatically print receipts after sale completion',
           icon: '🖨️',
+          type: 'toggle'
+        },
+        {
+          key: 'barcode_scanner_enabled',
+          label: 'Enable Barcode Scanner',
+          description: 'Use barcode scanner for quick product lookup and POS checkout',
+          icon: '📱',
           type: 'toggle'
         },
       ]
