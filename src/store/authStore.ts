@@ -6,7 +6,9 @@ interface AuthState {
   user: User | null
   session: unknown | null
   loading: boolean
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>
+  rememberMe: boolean
+  initialized: boolean
+  signIn: (email: string, password: string, rememberMe?: boolean) => Promise<{ error: string | null }>
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: string | null }>
   signInWithGoogle: (origin?: 'login' | 'register') => Promise<{ error: string | null }>
   signOut: () => Promise<void>
@@ -77,10 +79,13 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   session: null,
   loading: true,
+  rememberMe: localStorage.getItem('auth_remember_me') === 'true',
+  initialized: false,
 
   initialize: async () => {
     try {
       const { data: { session }, error } = await supabase.auth.getSession()
+      const rememberMe = localStorage.getItem('auth_remember_me') === 'true'
       
       // Session retrieval failed (could be network error or invalid token)
       if (error) {
@@ -88,60 +93,87 @@ export const useAuthStore = create<AuthState>((set) => ({
         if (error.message?.includes('refresh') || error.message?.includes('Invalid')) {
           await supabase.auth.signOut().catch(() => {}) // Silently fail if already signed out
         }
-        set({ user: null, session: null, loading: false })
+        set({ user: null, session: null, loading: false, initialized: true, rememberMe })
         return
       }
       
       // No session found
       if (!session) {
-        set({ user: null, session: null, loading: false })
+        set({ user: null, session: null, loading: false, initialized: true, rememberMe })
+        return
+      }
+
+      // Check if user selected "Remember Me" when logging in
+      if (!rememberMe) {
+        // If not remembering me, clear the session immediately
+        // This will log them out when they close the app
+        await supabase.auth.signOut().catch(() => {})
+        set({ user: null, session: null, loading: false, initialized: true, rememberMe: false })
         return
       }
       
-      // Session exists, load user profile
+      // Session exists and user selected "Remember Me", load user profile
       try {
         const user = await getOrCreateUserProfile(session.user)
-        set({ session, user, loading: false })
+        set({ session, user, loading: false, initialized: true, rememberMe: true })
       } catch (profileError) {
         console.error('Failed to load profile:', profileError)
-        set({ user: null, session: null, loading: false })
+        set({ user: null, session: null, loading: false, initialized: true, rememberMe })
       }
     } catch (error) {
       console.error('Error during auth initialization:', error)
-      set({ user: null, session: null, loading: false })
+      set({ user: null, session: null, loading: false, initialized: true, rememberMe: localStorage.getItem('auth_remember_me') === 'true' })
     }
   },
 
-  signIn: async (email, password) => {
+  signIn: async (email, password, rememberMe = false) => {
     try {
+      // Set the "Remember Me" preference BEFORE authentication
+      // This ensures Supabase stores the token in the correct storage
+      if (rememberMe) {
+        localStorage.setItem('auth_remember_me', 'true')
+      } else {
+        localStorage.removeItem('auth_remember_me')
+      }
+
       const { data, error } = await supabase.auth.signInWithPassword({ email, password })
       
       if (error) {
         // User-friendly error messages
         if (error.message?.includes('Invalid login credentials')) {
+          // Clear the remember me flag if login failed
+          localStorage.removeItem('auth_remember_me')
           return { error: 'Incorrect email or password' }
         }
         if (error.message?.includes('Email not confirmed')) {
+          // Clear the remember me flag if login failed
+          localStorage.removeItem('auth_remember_me')
           return { error: 'Please confirm your email before signing in' }
         }
+        // Clear the remember me flag if login failed
+        localStorage.removeItem('auth_remember_me')
         return { error: error.message || 'Login failed' }
       }
       
       if (!data.session || !data.user) {
+        // Clear the remember me flag if login failed
+        localStorage.removeItem('auth_remember_me')
         return { error: 'Login failed. Please try again.' }
       }
 
       try {
         const user = await getOrCreateUserProfile(data.user)
-        set({ session: data.session, user, loading: false })
+        set({ session: data.session, user, loading: false, rememberMe, initialized: true })
         return { error: null }
       } catch (profileError) {
         console.error('Failed to load profile after login:', profileError)
         // Still log them in even if profile load fails
-        set({ session: data.session, user: null, loading: false })
+        set({ session: data.session, user: null, loading: false, rememberMe, initialized: true })
         return { error: null }
       }
     } catch (e: unknown) {
+      // Clear the remember me flag if an exception occurs
+      localStorage.removeItem('auth_remember_me')
       const message = e instanceof Error ? e.message : 'Login failed'
       return { error: message }
     }
@@ -176,8 +208,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   signOut: async () => {
+    localStorage.removeItem('auth_remember_me')
     await supabase.auth.signOut()
-    set({ user: null, session: null, loading: false })
+    set({ user: null, session: null, loading: false, rememberMe: false, initialized: true })
     // Also clear cart when user signs out
     try {
       const { useCartStore } = await import('./cartStore')
@@ -188,7 +221,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   clearUser: () => {
-    set({ user: null, session: null, loading: false })
+    set({ user: null, session: null, loading: false, rememberMe: false, initialized: true })
   },
 
   fetchProfile: async (authUserId: string) => {
@@ -215,6 +248,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data: { user: authUser }, error: authError } = await supabase.auth.getUser()
 
       if (authError || !authUser) {
+        set({ initialized: true })
         return { isNewUser: true, hasBusiness: false }
       }
 
@@ -231,6 +265,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (profileError && profileError.code !== 'PGRST116') {
         console.warn('Profile lookup error:', profileError)
         // On unexpected DB errors, fail safe: send to register rather than crash
+        set({ initialized: true })
         return { isNewUser: true, hasBusiness: false }
       }
 
@@ -253,12 +288,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       // ── Step 3: Load full profile into store if they're an existing user ──
       if (!isNewUser) {
         const userProfile = await getOrCreateUserProfile(authUser)
-        set({ user: userProfile, loading: false })
+        set({ user: userProfile, loading: false, initialized: true })
+      } else {
+        set({ initialized: true })
       }
 
       return { isNewUser, hasBusiness }
     } catch (error) {
       console.error('Error checking user status:', error)
+      set({ initialized: true })
       return { isNewUser: true, hasBusiness: false }
     }
   },

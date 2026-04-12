@@ -24,23 +24,28 @@ export default function AuthPage() {
   const [submitting, setSubmitting] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [rememberMe, setRememberMe] = useState(localStorage.getItem('auth_remember_me') === 'true')
 
-  const { signIn, signInWithGoogle, user } = useAuthStore()
+  const { signIn, signInWithGoogle, user, initialized } = useAuthStore()
   const navigate = useNavigate()
 
   useEffect(() => {
     setMounted(true)
   }, [])
 
+  // Only redirect if initialized and user exists
+  // This prevents race condition on mobile/Safari
   useEffect(() => {
-    if (user) navigate('/dashboard', { replace: true })
-  }, [user, navigate])
+    if (initialized && user) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [user, navigate, initialized])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
     try {
-      const { error } = await signIn(email, password)
+      const { error } = await signIn(email, password, rememberMe)
       if (error) toast.error(error)
     } finally {
       setSubmitting(false)
@@ -57,6 +62,21 @@ export default function AuthPage() {
     } finally {
       setGoogleLoading(false)
     }
+  }
+
+  // Don't render form until initialization is complete
+  // This prevents the race condition on mobile/Safari where form shows but session exists
+  if (!initialized) {
+    return (
+      <AuthLayout>
+        <div className="fixed inset-0 flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-10 h-10 border-2 border-slate-200 dark:border-slate-700 border-t-primary-500 rounded-full animate-spin" />
+            <p className="text-slate-600 dark:text-slate-400 text-sm">Loading...</p>
+          </div>
+        </div>
+      </AuthLayout>
+    )
   }
 
   return (
@@ -236,6 +256,29 @@ export default function AuthPage() {
           margin-bottom: 2rem;
         }
         @media (min-width: 1024px) { .mobile-brand { display: none; } }
+
+        .checkbox-group {
+          display: flex;
+          align-items: center;
+          gap: 0.5rem;
+          margin-bottom: 1rem;
+        }
+        .checkbox-input {
+          width: 18px;
+          height: 18px;
+          cursor: pointer;
+          accent-color: #6366f1;
+        }
+        .checkbox-label {
+          font-size: 0.875rem;
+          color: rgba(255,255,255,0.6);
+          cursor: pointer;
+          user-select: none;
+          font-family: 'DM Sans', sans-serif;
+        }
+        .checkbox-label:hover {
+          color: rgba(255,255,255,0.8);
+        }
       `}</style>
 
       <div className={`form-card ${mounted ? 'mounted' : ''}`}>
@@ -280,6 +323,19 @@ export default function AuthPage() {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+          </div>
+
+          <div className="checkbox-group">
+            <input
+              type="checkbox"
+              id="rememberMe"
+              className="checkbox-input"
+              checked={rememberMe}
+              onChange={e => setRememberMe(e.target.checked)}
+            />
+            <label htmlFor="rememberMe" className="checkbox-label">
+              Remember me on this device
+            </label>
           </div>
 
           <button type="submit" className="btn-submit" disabled={submitting}>

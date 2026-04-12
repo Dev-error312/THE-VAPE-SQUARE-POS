@@ -13,6 +13,28 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
+// Create custom storage that respects "Remember Me" preference
+// If user didn't check "Remember Me", use sessionStorage (cleared on close)
+// If user checked "Remember Me", use localStorage (persistent)
+class ConditionalStorage {
+  getItem(key: string): string | null {
+    const rememberMe = localStorage.getItem('auth_remember_me') === 'true'
+    const storage = rememberMe ? localStorage : sessionStorage
+    return storage.getItem(key)
+  }
+
+  setItem(key: string, value: string): void {
+    const rememberMe = localStorage.getItem('auth_remember_me') === 'true'
+    const storage = rememberMe ? localStorage : sessionStorage
+    storage.setItem(key, value)
+  }
+
+  removeItem(key: string): void {
+    localStorage.removeItem(key)
+    sessionStorage.removeItem(key)
+  }
+}
+
 export const supabase = createClient(
   supabaseUrl,
   supabaseAnonKey,
@@ -22,6 +44,7 @@ export const supabase = createClient(
       persistSession: true,
       autoRefreshToken: true,
       detectSessionInUrl: true,
+      storage: new ConditionalStorage(),
     },
   }
 )

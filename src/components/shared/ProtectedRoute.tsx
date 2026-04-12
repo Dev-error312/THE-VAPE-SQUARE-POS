@@ -8,9 +8,10 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children, adminOnly = false }: ProtectedRouteProps) {
-  const { user, loading } = useAuthStore()
+  const { user, initialized } = useAuthStore()
 
-  if (loading) {
+  // Wait until auth initialization is complete
+  if (!initialized) {
     return (
       <div className="fixed inset-0 bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
