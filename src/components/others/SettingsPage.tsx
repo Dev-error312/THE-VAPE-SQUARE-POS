@@ -251,7 +251,11 @@ export default function SettingsPage() {
                 {group.settings.map((setting) => (
                   <div
                     key={setting.key}
-                    className="px-6 py-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                    className={`px-6 py-4 flex hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${
+                      setting.type === 'select'
+                        ? 'flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-0'
+                        : 'items-center justify-between'
+                    }`}
                   >
                     <div className="flex items-center gap-4 flex-1">
                       <div className="text-2xl">{setting.icon}</div>
@@ -285,7 +289,7 @@ export default function SettingsPage() {
                       <select
                         value={settings[setting.key] as string}
                         onChange={(e) => handleSelectChange(setting.key, e.target.value)}
-                        className="ml-4 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 flex-shrink-0"
+                        className="w-full sm:w-auto sm:ml-4 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary-500 flex-shrink-0"
                       >
                         {setting.options && setting.options.map((opt: any) => (
                           <option key={opt.value} value={opt.value}>
