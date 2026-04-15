@@ -17,7 +17,7 @@ export default function POSPage() {
   const [showCheckout, setShowCheckout] = useState(false)
   const [showMobileCart, setShowMobileCart] = useState(false)
   const [barcodeInput, setBarcodeInput] = useState('')
-  const { settings } = useSettings()
+  const { settings, loading: settingsLoading } = useSettings()
 
   // Cart summary for floating button
   const cartItemCount = useCartStore(s => s.items.reduce((sum, i) => sum + i.quantity, 0))
@@ -90,7 +90,7 @@ export default function POSPage() {
             <p className="text-xs text-slate-600 dark:text-slate-400">Select products to add to cart</p>
           </div>
           {/* Barcode input bar (only shown if barcode_scanner_enabled is true) */}
-          {settings.barcode_scanner_enabled && (
+          {!settingsLoading && settings.barcode_scanner_enabled && (
             <div className="relative">
               <Barcode className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
