@@ -100,9 +100,8 @@ export const useCartStore = create<CartState>((set, get) => ({
   setEnteredAmount: (productId, amount) => {
     const item = get().items.find(i => i.product.id === productId)
     if (!item) return
-    const maxAmount = item.unit_price * item.quantity
-    // Clamp: can't enter more than list price, can't be negative
-    const clamped = round2(Math.max(0, Math.min(amount, maxAmount)))
+    // Allow any non-negative amount (including above list price)
+    const clamped = round2(Math.max(0, amount))
     set(state => ({
       enteredAmounts: { ...state.enteredAmounts, [productId]: clamped },
     }))

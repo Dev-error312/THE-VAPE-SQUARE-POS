@@ -114,7 +114,6 @@ export default function CartPanel({ onCheckout }: CartPanelProps) {
                           type="number"
                           step="1"
                           min="0"
-                          max={listPrice}
                           value={entered === 0 ? '' : entered}
                           onChange={e => setEnteredAmount(item.product.id, parseFloat(e.target.value) || 0)}
                           placeholder={String(listPrice)}
