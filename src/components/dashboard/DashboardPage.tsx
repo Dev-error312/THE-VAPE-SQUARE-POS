@@ -100,44 +100,48 @@ export default function DashboardPage() {
   ]
 
   return (
-    <div className="p-4 sm:p-6 space-y-5">
+    <div className="p-4 sm:p-8 space-y-8 bg-slate-50 dark:bg-slate-950 min-h-screen">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
-          <p className="text-slate-600 dark:text-slate-400 text-sm mt-0.5">Business overview at a glance</p>
+          <h1 className="section-title">Dashboard</h1>
+          <p className="section-subtitle mt-1">Real-time business performance</p>
         </div>
-        <button onClick={load} className="btn-secondary flex items-center gap-2 text-sm">
+        <button onClick={load} className="btn-secondary flex items-center gap-2 text-sm px-3 py-2">
           <RefreshCw className="w-4 h-4" /> Refresh
         </button>
       </div>
 
-      {/* Sales Stats */}
-      <div className={`grid grid-cols-2 ${isAdmin ? 'xl:grid-cols-4' : 'sm:grid-cols-3'} gap-4`}>
-        {statCards.map(card => (
-          <div key={card.label} className="card p-4 sm:p-5">
-            <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center mb-3`}>
-              <card.icon className={`w-5 h-5 ${card.color}`} />
+      {/* Sales Stats Cards */}
+      <div>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-4">Key Metrics</h3>
+        <div className={`grid grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
+          {statCards.map(card => (
+            <div key={card.label} className="stat-card group hover:shadow-lg hover:border-primary-300 dark:hover:border-primary-800">
+              <div className={`w-12 h-12 ${card.bg} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                <card.icon className={`w-6 h-6 ${card.color}`} />
+              </div>
+              <p className="stat-label text-slate-500 dark:text-slate-400">{card.label}</p>
+              <p className="stat-value">{card.value}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{card.sub}</p>
             </div>
-            <p className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white font-mono truncate">{card.value}</p>
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mt-1">{card.label}</p>
-            <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">{card.sub}</p>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* Stock Valuation — admin only */}
       {isAdmin && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide mb-3">Stock Valuation</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-4">Inventory Health</h3>
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {stockCards.map(card => (
-              <div key={card.label} className="card p-4 sm:p-5">
-                <div className={`w-10 h-10 ${card.bg} rounded-xl flex items-center justify-center mb-3`}>
-                  <card.icon className={`w-5 h-5 ${card.color}`} />
+              <div key={card.label} className="stat-card group hover:shadow-lg hover:border-primary-300 dark:hover:border-primary-800">
+                <div className={`w-12 h-12 ${card.bg} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                  <card.icon className={`w-6 h-6 ${card.color}`} />
                 </div>
-                <p className={`text-xl font-bold font-mono ${card.color}`}>{card.value}</p>
-                <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mt-1">{card.label}</p>
-                <p className="text-xs text-slate-500 mt-0.5 hidden sm:block">{card.sub}</p>
+                <p className="stat-label">{card.label}</p>
+                <p className={`stat-value ${card.color}`}>{card.value}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{card.sub}</p>
               </div>
             ))}
           </div>
@@ -145,62 +149,65 @@ export default function DashboardPage() {
       )}
 
       {/* Chart + Low Stock */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-        <div className="card p-5 xl:col-span-2">
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white mb-4">Revenue & Profit (7 days)</h2>
-          <ResponsiveContainer width="100%" height={200}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="card-premium lg:col-span-2 p-6">
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Revenue & Profit Trend</h2>
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">Last 7 days performance</p>
+          <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -10, bottom: 0 }}>
               <defs>
                 <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#0ea5e9" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                  <stop offset="5%"  stopColor="#a855f7" stopOpacity={0.2} />
+                  <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
                 </linearGradient>
                 <linearGradient id="gProfit" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#10b981" stopOpacity={0.25} />
+                  <stop offset="5%"  stopColor="#10b981" stopOpacity={0.2} />
                   <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 11 }} axisLine={false} tickLine={false}
+              <XAxis dataKey="date" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fill: '#94a3b8', fontSize: 12 }} axisLine={false} tickLine={false}
                 tickFormatter={v => v >= 1000 ? `${(v/1000).toFixed(0)}k` : String(v)} />
               <Tooltip
-                contentStyle={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: 10, fontSize: 12 }}
-                labelStyle={{ color: '#e2e8f0', marginBottom: 4 }}
+                contentStyle={{ background: '#1e293b', border: '1px solid #475569', borderRadius: 12, fontSize: 12 }}
+                labelStyle={{ color: '#f1f5f9', marginBottom: 4, fontWeight: 600 }}
                 formatter={(v: number, name: string) => [formatCurrency(v), name]}
               />
-              <Area type="monotone" dataKey="revenue" stroke="#0ea5e9" strokeWidth={2} fill="url(#gRevenue)" name="Revenue" />
+              <Area type="monotone" dataKey="revenue" stroke="#a855f7" strokeWidth={2.5} fill="url(#gRevenue)" name="Revenue" dot={{ fill: '#a855f7', r: 4 }} />
               {isAdmin && (
-                <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2} fill="url(#gProfit)" name="Profit" />
+                <Area type="monotone" dataKey="profit" stroke="#10b981" strokeWidth={2.5} fill="url(#gProfit)" name="Profit" dot={{ fill: '#10b981', r: 4 }} />
               )}
             </AreaChart>
           </ResponsiveContainer>
         </div>
 
-        <div className="card p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <AlertTriangle className="w-4 h-4 text-amber-400" />
-            <h2 className="text-base font-semibold text-slate-900 dark:text-white">Low Stock</h2>
+        <div className="card-premium p-6">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-amber-400" />
+            </div>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Low Stock</h2>
             {lowStock.length > 0 && (
-              <span className="ml-auto badge bg-amber-500/20 text-amber-400 text-xs">{lowStock.length}</span>
+              <span className="ml-auto badge-warning">{lowStock.length} items</span>
             )}
           </div>
           {lowStock.length === 0 ? (
-            <div className="text-center py-8 text-slate-600">
-              <Package className="w-10 h-10 mx-auto mb-2 opacity-20" />
-              <p className="text-sm">All products well stocked</p>
+            <div className="text-center py-12 text-slate-500">
+              <Package className="w-12 h-12 mx-auto mb-3 opacity-30" />
+              <p className="text-sm font-medium">All products well stocked</p>
             </div>
           ) : (
-            <div className="space-y-2 overflow-y-auto max-h-52">
+            <div className="space-y-3 overflow-y-auto max-h-56">
               {lowStock.map(p => (
-                <div key={p.id} className="flex items-center justify-between py-2 border-b border-slate-200 dark:border-slate-700/40 last:border-0">
+                <div key={p.id} className="flex items-center justify-between p-3 bg-slate-100/50 dark:bg-slate-800/30 rounded-lg hover:bg-slate-200/50 dark:hover:bg-slate-700/40 transition-colors">
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{p.name}</p>
+                    <p className="font-medium text-slate-900 dark:text-slate-100 text-sm truncate">{p.name}</p>
                     {p.brand && <p className="text-xs text-slate-500 truncate">{p.brand}</p>}
                   </div>
-                  <span className={`badge ml-2 flex-shrink-0 ${(p.total_stock || 0) === 0
-                    ? 'bg-red-500/20 text-red-400 border border-red-500/30'
-                    : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'}`}>
-                    {p.total_stock || 0} {p.unit}
+                  <span className={`badge ml-3 flex-shrink-0 font-medium ${(p.total_stock || 0) === 0
+                    ? 'bg-red-500/20 text-red-600 dark:text-red-400'
+                    : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'}`}>
+                    {p.total_stock || 0}
                   </span>
                 </div>
               ))}
@@ -210,44 +217,46 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Sales */}
-      <div className="card overflow-hidden">
-        <div className="flex items-center gap-2 px-4 sm:px-5 py-4 border-b border-slate-200 dark:border-slate-700/40">
-          <ShoppingCart className="w-4 h-4 text-slate-600 dark:text-slate-400" />
-          <h2 className="text-base font-semibold text-slate-900 dark:text-white">Recent Sales</h2>
+      <div className="card-premium overflow-hidden">
+        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-200 dark:border-slate-800">
+          <div className="w-10 h-10 bg-primary-500/10 rounded-lg flex items-center justify-center">
+            <ShoppingCart className="w-5 h-5 text-primary-600 dark:text-primary-400" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Recent Sales</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="text-xs text-slate-600 dark:text-slate-400 uppercase tracking-wide border-b border-slate-200 dark:border-slate-700/40 bg-slate-100 dark:bg-slate-800/40">
-                <th className="text-left px-4 py-3">Invoice</th>
-                <th className="text-left px-4 py-3 hidden sm:table-cell">Date</th>
-                <th className="text-left px-4 py-3">Products</th>
-                <th className="text-right px-4 py-3 hidden sm:table-cell">Qty</th>
-                <th className="text-left px-4 py-3 hidden sm:table-cell">Payment</th>
-                <th className="text-right px-4 py-3">Total</th>
-                <th className="text-left px-4 py-3">Status</th>
+              <tr className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-800/30">
+                <th className="text-left px-6 py-4">Invoice</th>
+                <th className="text-left px-6 py-4 hidden sm:table-cell">Date</th>
+                <th className="text-left px-6 py-4">Products</th>
+                <th className="text-right px-6 py-4 hidden sm:table-cell">Qty</th>
+                <th className="text-left px-6 py-4 hidden sm:table-cell">Payment</th>
+                <th className="text-right px-6 py-4">Total</th>
+                <th className="text-left px-6 py-4">Status</th>
               </tr>
             </thead>
             <tbody>
               {(recentSales.filter(s => (s.sale_items || []).length > 0)).length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-10 text-slate-500 text-sm">No sales yet</td></tr>
+                <tr><td colSpan={7} className="text-center py-12 text-slate-500 text-sm">No sales yet</td></tr>
               ) : recentSales
-                  .filter(s => (s.sale_items || []).length > 0)  // Only show sales with items (filters out deleted/incomplete sales)
+                  .filter(s => (s.sale_items || []).length > 0)
                   .map(sale => {
                 const { label, qty } = summariseItems(sale)
                 return (
-                  <tr key={sale.id} className="border-b border-slate-200 dark:border-slate-700/30 hover:bg-slate-200 dark:hover:bg-slate-700/20 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs text-primary-400 whitespace-nowrap">{sale.sale_number}</td>
-                    <td className="px-4 py-3 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap hidden sm:table-cell">{formatDate(sale.created_at)}</td>
-                    <td className="px-4 py-3 text-xs text-slate-700 dark:text-slate-300 max-w-[120px] sm:max-w-[200px] truncate">{label}</td>
-                    <td className="px-4 py-3 text-right text-sm font-mono text-slate-700 dark:text-slate-300 hidden sm:table-cell">{qty}</td>
-                    <td className="px-4 py-3 hidden sm:table-cell">
-                      <span className="badge bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs">{paymentLabel(sale.payment_method)}</span>
+                  <tr key={sale.id} className="border-b border-slate-200 dark:border-slate-800 hover:bg-slate-100/50 dark:hover:bg-slate-800/30 transition-colors">
+                    <td className="px-6 py-4 font-mono text-xs font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">{sale.sale_number}</td>
+                    <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap hidden sm:table-cell">{formatDate(sale.created_at)}</td>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-700 dark:text-slate-300 max-w-[120px] sm:max-w-[200px] truncate">{label}</td>
+                    <td className="px-6 py-4 text-right text-sm font-mono font-semibold text-slate-700 dark:text-slate-300 hidden sm:table-cell">{qty}</td>
+                    <td className="px-6 py-4 hidden sm:table-cell">
+                      <span className="badge badge-primary text-xs font-medium">{paymentLabel(sale.payment_method)}</span>
                     </td>
-                    <td className="px-4 py-3 text-right font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap text-sm">{formatCurrency(sale.total)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`badge text-xs capitalize ${sale.status === 'completed'
-                        ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                    <td className="px-6 py-4 text-right font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">{formatCurrency(sale.total)}</td>
+                    <td className="px-6 py-4">
+                      <span className={`badge text-xs font-medium capitalize ${sale.status === 'completed'
+                        ? 'badge-success'
                         : 'bg-red-500/15 text-red-400 border border-red-500/30'}`}>
                         {sale.status}
                       </span>

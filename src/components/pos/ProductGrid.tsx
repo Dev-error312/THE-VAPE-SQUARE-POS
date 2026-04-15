@@ -46,24 +46,26 @@ export default function ProductGrid({ products, loading }: ProductGridProps) {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-gradient-to-b from-white to-slate-50 dark:from-slate-900 dark:to-slate-950">
       {/* Search + Category filters */}
-      <div className="p-3 space-y-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+      <div className="p-4 space-y-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 dark:text-slate-400" />
           <input
-            className="input pl-9 py-2 text-sm bg-white dark:bg-slate-900"
-            placeholder="Search by name or brand..."
+            className="input pl-10 py-2.5 text-sm font-medium"
+            placeholder="Search products..."
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
         {categories.length > 0 && (
-          <div className="flex gap-1.5 overflow-x-auto pb-0.5">
+          <div className="flex gap-2 overflow-x-auto pb-1.5 -mx-4 px-4">
             <button
               onClick={() => setSelectedCategory('')}
-              className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
-                !selectedCategory ? 'bg-primary-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700'
+              className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
+                !selectedCategory 
+                  ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm' 
+                  : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
               }`}>
               All
             </button>
@@ -71,8 +73,10 @@ export default function ProductGrid({ products, loading }: ProductGridProps) {
               <button
                 key={cat}
                 onClick={() => setSelectedCategory(cat === selectedCategory ? '' : cat)}
-                className={`px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition-all flex-shrink-0 ${
-                  selectedCategory === cat ? 'bg-primary-600 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200 dark:border-slate-700'
+                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all flex-shrink-0 ${
+                  selectedCategory === cat 
+                    ? 'bg-gradient-to-r from-primary-600 to-primary-700 text-white shadow-sm' 
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700'
                 }`}>
                 {cat}
               </button>
@@ -82,14 +86,15 @@ export default function ProductGrid({ products, loading }: ProductGridProps) {
       </div>
 
       {/* Product grid */}
-      <div className="flex-1 overflow-y-auto p-3">
+      <div className="flex-1 overflow-y-auto p-4">
         {filtered.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-48 text-slate-600">
-            <Package className="w-10 h-10 mb-2 opacity-20" />
-            <p className="text-sm font-medium">No products found</p>
+          <div className="flex flex-col items-center justify-center h-48 text-slate-500">
+            <Package className="w-12 h-12 mb-3 opacity-30" />
+            <p className="text-sm font-semibold">No products found</p>
+            <p className="text-xs mt-1">Try adjusting your filters</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-3">
             {filtered.map(product => {
               const inCart = getCartQty(product.id)
               const stock = product.total_stock || 0
@@ -99,36 +104,42 @@ export default function ProductGrid({ products, loading }: ProductGridProps) {
                   key={product.id}
                   onClick={() => !atMax && addItem(product)}
                   disabled={atMax}
-                  className={`relative bg-slate-100 dark:bg-slate-800 border rounded-xl p-3 text-left transition-all ${
+                  className={`relative card-hover p-4 text-left flex flex-col h-full transition-all ${
                     atMax
-                      ? 'border-slate-200 dark:border-slate-700 opacity-50 cursor-not-allowed'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-primary-500/60 hover:bg-slate-200 dark:hover:bg-slate-700/80 active:scale-95 cursor-pointer'
+                      ? 'opacity-50 cursor-not-allowed'
+                      : 'active:scale-95 cursor-pointer'
                   }`}
                 >
                   {/* Cart quantity badge */}
                   {inCart > 0 && (
-                    <span className="absolute top-2 right-2 bg-primary-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center leading-none">
+                    <span className="absolute -top-2 -right-2 bg-gradient-to-br from-primary-600 to-primary-700 text-white text-xs font-bold w-7 h-7 rounded-full flex items-center justify-center leading-none shadow-md">
                       {inCart}
                     </span>
                   )}
 
-                  {/* Product info — no image/icon placeholder */}
-                  <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm leading-snug line-clamp-2 mb-1 pr-6">
+                  {/* Product info */}
+                  <p className="font-bold text-slate-900 dark:text-white text-sm leading-snug line-clamp-2 mb-2 flex-1">
                     {product.name}
                   </p>
 
                   {(product.brand || product.supplier_name) && (
-                    <p className="text-xs text-slate-500 truncate mb-1 leading-tight">
-                      {[product.brand, product.supplier_name].filter(Boolean).join(' · ')}
+                    <p className="text-xs text-slate-600 dark:text-slate-400 truncate mb-3 leading-tight font-medium">
+                      {[product.brand, product.supplier_name].filter(Boolean).join(' • ')}
                     </p>
                   )}
 
-                  <div className="flex items-center justify-between gap-1 mt-auto">
-                    <span className="text-primary-400 font-bold text-sm font-mono">
+                  <div className="flex items-center justify-between gap-2 mt-auto pt-3 border-t border-slate-200 dark:border-slate-700">
+                    <span className="text-primary-700 dark:text-primary-400 font-bold text-base font-mono">
                       {formatCurrency(product.selling_price)}
                     </span>
-                    <span className={`text-xs font-mono ${stock <= 5 ? 'text-amber-400' : 'text-slate-500'}`}>
-                      {stock} {product.unit}
+                    <span className={`text-xs font-semibold font-mono px-2 py-1 rounded-lg ${
+                      stock === 0 
+                        ? 'bg-red-500/15 text-red-600 dark:text-red-400' 
+                        : stock <= 5 
+                        ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400' 
+                        : 'bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300'
+                    }`}>
+                      {stock}
                     </span>
                   </div>
                 </button>
@@ -138,9 +149,9 @@ export default function ProductGrid({ products, loading }: ProductGridProps) {
         )}
       </div>
 
-      <div className="px-3 py-2 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
-        <p className="text-xs text-slate-500">
-          {filtered.length} of {products.filter(p => (p.total_stock || 0) > 0).length} products in stock
+      <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <p className="text-xs font-medium text-slate-600 dark:text-slate-400">
+          {filtered.length} of {products.filter(p => (p.total_stock || 0) > 0).length} products available
         </p>
       </div>
     </div>
