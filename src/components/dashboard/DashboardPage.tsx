@@ -115,15 +115,15 @@ export default function DashboardPage() {
       {/* Sales Stats Cards */}
       <div>
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-4">Key Metrics</h3>
-        <div className={`grid grid-cols-2 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'} gap-4`}>
+        <div className={`grid grid-cols-2 gap-3 sm:gap-4 ${isAdmin ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
           {statCards.map(card => (
             <div key={card.label} className="stat-card group hover:shadow-lg hover:border-primary-300 dark:hover:border-primary-800">
-              <div className={`w-12 h-12 ${card.bg} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                <card.icon className={`w-6 h-6 ${card.color}`} />
+              <div className={`w-11 h-11 sm:w-12 sm:h-12 ${card.bg} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                <card.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${card.color}`} />
               </div>
-              <p className="stat-label text-slate-500 dark:text-slate-400">{card.label}</p>
+              <p className="stat-label text-slate-500 dark:text-slate-500">{card.label}</p>
               <p className="stat-value">{card.value}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{card.sub}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{card.sub}</p>
             </div>
           ))}
         </div>
@@ -133,15 +133,15 @@ export default function DashboardPage() {
       {isAdmin && (
         <div>
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-4">Inventory Health</h3>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3">
             {stockCards.map(card => (
               <div key={card.label} className="stat-card group hover:shadow-lg hover:border-primary-300 dark:hover:border-primary-800">
-                <div className={`w-12 h-12 ${card.bg} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
-                  <card.icon className={`w-6 h-6 ${card.color}`} />
+                <div className={`w-11 h-11 sm:w-12 sm:h-12 ${card.bg} rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform`}>
+                  <card.icon className={`w-5 h-5 sm:w-6 sm:h-6 ${card.color}`} />
                 </div>
                 <p className="stat-label">{card.label}</p>
                 <p className={`stat-value ${card.color}`}>{card.value}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">{card.sub}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{card.sub}</p>
               </div>
             ))}
           </div>
@@ -149,8 +149,8 @@ export default function DashboardPage() {
       )}
 
       {/* Chart + Low Stock */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="card-premium lg:col-span-2 p-6">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 lg:grid-cols-3">
+        <div className="card-premium lg:col-span-2 p-5 sm:p-6">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white mb-4">Revenue & Profit Trend</h2>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">Last 7 days performance</p>
           <ResponsiveContainer width="100%" height={220}>
@@ -181,7 +181,7 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </div>
 
-        <div className="card-premium p-6">
+        <div className="card-premium p-5 sm:p-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center">
               <AlertTriangle className="w-5 h-5 text-amber-400" />
@@ -218,7 +218,7 @@ export default function DashboardPage() {
 
       {/* Recent Sales */}
       <div className="card-premium overflow-hidden">
-        <div className="flex items-center gap-3 px-6 py-5 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-center gap-3 px-5 sm:px-6 py-4 sm:py-5 border-b border-slate-200 dark:border-slate-800">
           <div className="w-10 h-10 bg-primary-500/10 rounded-lg flex items-center justify-center">
             <ShoppingCart className="w-5 h-5 text-primary-600 dark:text-primary-400" />
           </div>
@@ -228,13 +228,13 @@ export default function DashboardPage() {
           <table className="w-full">
             <thead>
               <tr className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 bg-slate-100/50 dark:bg-slate-800/30">
-                <th className="text-left px-6 py-4">Invoice</th>
-                <th className="text-left px-6 py-4 hidden sm:table-cell">Date</th>
-                <th className="text-left px-6 py-4">Products</th>
-                <th className="text-right px-6 py-4 hidden sm:table-cell">Qty</th>
-                <th className="text-left px-6 py-4 hidden sm:table-cell">Payment</th>
-                <th className="text-right px-6 py-4">Total</th>
-                <th className="text-left px-6 py-4">Status</th>
+                <th className="text-left px-4 sm:px-6 py-3 sm:py-4">Invoice</th>
+                <th className="text-left px-4 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">Date</th>
+                <th className="text-left px-4 sm:px-6 py-3 sm:py-4">Products</th>
+                <th className="text-right px-4 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">Qty</th>
+                <th className="text-left px-4 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">Payment</th>
+                <th className="text-right px-4 sm:px-6 py-3 sm:py-4">Total</th>
+                <th className="text-left px-4 sm:px-6 py-3 sm:py-4">Status</th>
               </tr>
             </thead>
             <tbody>
@@ -246,15 +246,15 @@ export default function DashboardPage() {
                 const { label, qty } = summariseItems(sale)
                 return (
                   <tr key={sale.id} className="border-b border-slate-200 dark:border-slate-800 hover:bg-slate-100/50 dark:hover:bg-slate-800/30 transition-colors">
-                    <td className="px-6 py-4 font-mono text-xs font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">{sale.sale_number}</td>
-                    <td className="px-6 py-4 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap hidden sm:table-cell">{formatDate(sale.created_at)}</td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-700 dark:text-slate-300 max-w-[120px] sm:max-w-[200px] truncate">{label}</td>
-                    <td className="px-6 py-4 text-right text-sm font-mono font-semibold text-slate-700 dark:text-slate-300 hidden sm:table-cell">{qty}</td>
-                    <td className="px-6 py-4 hidden sm:table-cell">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 font-mono text-xs font-bold text-primary-600 dark:text-primary-400 whitespace-nowrap">{sale.sale_number}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-xs text-slate-600 dark:text-slate-400 whitespace-nowrap hidden sm:table-cell">{formatDate(sale.created_at)}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-sm font-medium text-slate-700 dark:text-slate-300 max-w-[120px] sm:max-w-[200px] truncate">{label}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-right text-sm font-mono font-semibold text-slate-700 dark:text-slate-300 hidden sm:table-cell">{qty}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 hidden sm:table-cell">
                       <span className="badge badge-primary text-xs font-medium">{paymentLabel(sale.payment_method)}</span>
                     </td>
-                    <td className="px-6 py-4 text-right font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">{formatCurrency(sale.total)}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 sm:px-6 py-3 sm:py-4 text-right font-bold font-mono text-slate-900 dark:text-white whitespace-nowrap">{formatCurrency(sale.total)}</td>
+                    <td className="px-4 sm:px-6 py-3 sm:py-4">
                       <span className={`badge text-xs font-medium capitalize ${sale.status === 'completed'
                         ? 'badge-success'
                         : 'bg-red-500/15 text-red-400 border border-red-500/30'}`}>
