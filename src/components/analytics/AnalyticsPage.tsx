@@ -4,7 +4,7 @@ import { expensesApi, damagedApi } from '../../lib/expensesApi'
 import { wholesaleApi } from '../../lib/wholesaleApi'
 import { useSettings } from '../../hooks/useSettings'
 import { formatCurrency, formatDate } from '../../utils'
-import { adToBS, bsToAD, getDaysInBS, getMonthRangeDatesAuto } from '../../utils/dateConverter'
+import { adToBS, bsToAD, getDaysInBS } from '../../utils/dateConverter'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend
