@@ -4,7 +4,7 @@ import { expensesApi, damagedApi } from '../../lib/expensesApi'
 import { wholesaleApi } from '../../lib/wholesaleApi'
 import { useSettings } from '../../hooks/useSettings'
 import { formatCurrency, formatDate } from '../../utils'
-import { adToBS, bsToAD, getDaysInBS } from '../../utils/dateConverter'
+import { adToBS, bsToAD, getDaysInBS, getMonthRangeDatesAuto } from '../../utils/dateConverter'
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
   ResponsiveContainer, Legend
@@ -43,10 +43,38 @@ export default function AnalyticsPage() {
   const { settings } = useSettings()
   const dateFormat = settings?.date_format ?? 'AD'
 
-  const todayStr = new Date().toISOString().slice(0, 10)
-  const monthStartStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
+  // Calculate this month's start and end based on calendar type (using UTC to avoid timezone issues)
+  const getThisMonthRange = () => {
+    if (dateFormat === 'BS') {
+      const todayBS = adToBS(new Date())
+      const monthStartBS = { year: todayBS.year, month: todayBS.month, day: 1 }
+      const monthEndBS = {
+        year: todayBS.year,
+        month: todayBS.month,
+        day: getDaysInBS(todayBS.year, todayBS.month),
+      }
+      return {
+        start: bsToAD(monthStartBS).toISOString().slice(0, 10),
+        end: bsToAD(monthEndBS).toISOString().slice(0, 10),
+      }
+    } else {
+      // Use UTC to avoid timezone issues (e.g., April 1 local becoming March 31 UTC)
+      const now = new Date()
+      const year = now.getUTCFullYear()
+      const month = now.getUTCMonth()
+      const start = `${year}-${String(month + 1).padStart(2, '0')}-01`
+      // Last day of month: get first day of next month, subtract 1 day
+      const nextMonthDate = new Date(Date.UTC(year, month + 1, 1))
+      nextMonthDate.setUTCDate(0)
+      const end = nextMonthDate.toISOString().slice(0, 10)
+      return { start, end }
+    }
+  }
 
-  const [startDate, setStartDate] = useState(monthStartStr)
+  const todayStr = new Date().toISOString().slice(0, 10)
+  const thisMonthRange = getThisMonthRange()
+
+  const [startDate, setStartDate] = useState(thisMonthRange.start)
   const [endDate, setEndDate] = useState(todayStr)
   const [selectedPreset, setSelectedPreset] = useState<string>('This Month')
   const [rows, setRows] = useState<DayRow[]>([])
@@ -64,6 +92,23 @@ export default function AnalyticsPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [salesVersion])
+
+  // Auto-load data when dates change (includes initial mount)
+  useEffect(() => {
+    if (startDate && endDate) {
+      load()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startDate, endDate])
+
+  // When calendar preference changes, recalculate dates automatically
+  useEffect(() => {
+    const newRange = getThisMonthRange()
+    setStartDate(newRange.start)
+    setEndDate(newRange.end)
+    setSelectedPreset('This Month')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFormat])
 
   // ─────────────────────────────────────────────────────────────────────────
   // PRESETS — Calendar-aware date preset calculations

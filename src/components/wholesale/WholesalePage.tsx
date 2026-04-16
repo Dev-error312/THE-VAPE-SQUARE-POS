@@ -2,7 +2,9 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useIsAdmin } from '../../hooks/useRole'
 import { useAuthStore } from '../../store/authStore'
+import { useSettings } from '../../hooks/useSettings'
 import { formatCurrency, formatDate } from '../../utils'
+import { adToBS, bsToAD, getDaysInBS } from '../../utils/dateConverter'
 import { productsApi } from '../../lib/productsApi'
 import type { Product, WholesaleSale, WholesaleItem } from '../../types'
 import {
@@ -40,6 +42,8 @@ const calcSaleProfit = (items: WholesaleItem[]) =>
 // ─── Component ─────────────────────────────────────────────────────────────
 export default function WholesalePage() {
   const isAdmin = useIsAdmin()
+  const { settings } = useSettings()
+  const dateFormat = settings?.date_format ?? 'AD'
   const today   = new Date().toISOString().slice(0, 10)
 
   const [sales,    setSales]    = useState<WholesaleSale[]>([])
@@ -73,18 +77,92 @@ export default function WholesalePage() {
   }[]>([])
   const [selectedProductId, setSelectedProductId] = useState('')
 
+  // ── Calculate this month's range (for auto-switch on calendar change) ────
+  const getThisMonthRange = () => {
+    if (dateFormat === 'BS') {
+      const todayBS = adToBS(new Date())
+      const monthStartBS = { year: todayBS.year, month: todayBS.month, day: 1 }
+      const monthEndBS = {
+        year: todayBS.year,
+        month: todayBS.month,
+        day: getDaysInBS(todayBS.year, todayBS.month),
+      }
+      return {
+        start: bsToAD(monthStartBS).toISOString().slice(0, 10),
+        end: bsToAD(monthEndBS).toISOString().slice(0, 10),
+      }
+    } else {
+      // AD calendar
+      const now = new Date()
+      const year = now.getUTCFullYear()
+      const month = now.getUTCMonth()
+      const start = `${year}-${String(month + 1).padStart(2, '0')}-01`
+      const nextMonthDate = new Date(Date.UTC(year, month + 1, 1))
+      nextMonthDate.setUTCDate(0)
+      const end = nextMonthDate.toISOString().slice(0, 10)
+      return { start, end }
+    }
+  }
+
   // ── Presets ───────────────────────────────────────────────────────────
   const getPresets = () => {
-    const now           = new Date()
-    const todayStr      = now.toISOString().slice(0, 10)
-    const monthStartStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-    const monthEndStr   = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
-    const weekStart     = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)
-    return [
-      { label: 'Today',      start: todayStr,      end: todayStr      },
-      { label: 'This Week',  start: weekStart,     end: todayStr      },
-      { label: 'This Month', start: monthStartStr, end: monthEndStr   },
-    ]
+    if (dateFormat === 'BS') {
+      // Calculate dates in BS calendar, then convert to AD for storage
+      const todayAD = new Date()
+      const todayBS = adToBS(todayAD)
+
+      // Today in BS → convert back to AD for storage
+      const todayADStr = bsToAD({ year: todayBS.year, month: todayBS.month, day: todayBS.day })
+        .toISOString().slice(0, 10)
+
+      // This week in BS: 6 days before today in BS
+      const weekStartBS = { ...todayBS }
+      weekStartBS.day -= 6
+      if (weekStartBS.day <= 0) {
+        weekStartBS.day += getDaysInBS(weekStartBS.year, weekStartBS.month)
+        weekStartBS.month -= 1
+        if (weekStartBS.month <= 0) {
+          weekStartBS.month = 12
+          weekStartBS.year -= 1
+        }
+      }
+      const weekStartADStr = bsToAD(weekStartBS).toISOString().slice(0, 10)
+
+      // This month in BS: from 1st to last day of current BS month
+      const monthStartBS = { year: todayBS.year, month: todayBS.month, day: 1 }
+      const monthEndBS = {
+        year: todayBS.year,
+        month: todayBS.month,
+        day: getDaysInBS(todayBS.year, todayBS.month),
+      }
+      const monthStartADStr = bsToAD(monthStartBS).toISOString().slice(0, 10)
+      const monthEndADStr = bsToAD(monthEndBS).toISOString().slice(0, 10)
+
+      return [
+        { label: 'Today',      start: todayADStr, end: todayADStr },
+        { label: 'This Week',  start: weekStartADStr, end: todayADStr },
+        { label: 'This Month', start: monthStartADStr, end: monthEndADStr },
+      ]
+    } else {
+      // AD calendar (default) — use UTC to avoid timezone issues
+      const now = new Date()
+      const todayStr = now.toISOString().slice(0, 10)
+      const weekStart = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)
+      
+      // Use UTC to avoid timezone issues
+      const year = now.getUTCFullYear()
+      const month = now.getUTCMonth()
+      const monthStartStr = `${year}-${String(month + 1).padStart(2, '0')}-01`
+      const nextMonthDate = new Date(Date.UTC(year, month + 1, 1))
+      nextMonthDate.setUTCDate(0)
+      const monthEndStr = nextMonthDate.toISOString().slice(0, 10)
+      
+      return [
+        { label: 'Today',      start: todayStr,      end: todayStr      },
+        { label: 'This Week',  start: weekStart,     end: todayStr      },
+        { label: 'This Month', start: monthStartStr, end: monthEndStr   },
+      ]
+    }
   }
 
   // ── Load — queries directly, avoids wholesaleApi date mismatch bug ────
@@ -123,6 +201,15 @@ export default function WholesalePage() {
   }, [startDate, endDate])
 
   useEffect(() => { load() }, [load])
+
+  // When calendar preference changes, switch to This Month view automatically
+  useEffect(() => {
+    const newRange = getThisMonthRange()
+    setStartDate(newRange.start)
+    setEndDate(newRange.end)
+    setSelectedPreset('This Month')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFormat])
 
   // ── Period stats ──────────────────────────────────────────────────────
   const completedSales = useMemo(() => sales.filter(s => s.status === 'completed'), [sales])

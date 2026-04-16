@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback, useMemo } from 'react'
 import { expensesApi, damagedApi, testerApi } from '../../lib/expensesApi'
 import { productsApi } from '../../lib/productsApi'
 import { useAuthStore } from '../../store/authStore'
+import { useSettings } from '../../hooks/useSettings'
+import { adToBS, bsToAD, getDaysInBS } from '../../utils/dateConverter'
 import type { Expense, DamagedProduct, Product } from '../../types'
 import { formatCurrency, formatDate } from '../../utils'
 import {
@@ -21,23 +23,52 @@ const isTester = (exp: Expense) =>
 
 export default function ExpensesPage() {
   const { user } = useAuthStore()
+  const { settings } = useSettings()
+  const dateFormat = settings?.date_format ?? 'AD'
   const [tab, setTab] = useState<Tab>('expenses')
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [damaged, setDamaged] = useState<DamagedProduct[]>([])
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
 
+  // Calculate this month's start and end based on calendar type (using UTC to avoid timezone issues)
+  const getThisMonthRange = () => {
+    if (dateFormat === 'BS') {
+      const todayBS = adToBS(new Date())
+      const monthStartBS = { year: todayBS.year, month: todayBS.month, day: 1 }
+      const monthEndBS = {
+        year: todayBS.year,
+        month: todayBS.month,
+        day: getDaysInBS(todayBS.year, todayBS.month),
+      }
+      return {
+        start: bsToAD(monthStartBS).toISOString().slice(0, 10),
+        end: bsToAD(monthEndBS).toISOString().slice(0, 10),
+      }
+    } else {
+      // Use UTC to avoid timezone issues (e.g., April 1 local becoming March 31 UTC)
+      const now = new Date()
+      const year = now.getUTCFullYear()
+      const month = now.getUTCMonth()
+      const start = `${year}-${String(month + 1).padStart(2, '0')}-01`
+      // Last day of month: get first day of next month, subtract 1 day
+      const nextMonthDate = new Date(Date.UTC(year, month + 1, 1))
+      nextMonthDate.setUTCDate(0)
+      const end = nextMonthDate.toISOString().slice(0, 10)
+      return { start, end }
+    }
+  }
+
   const todayStr = new Date().toISOString().slice(0, 10)
-  const monthStartStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
-  const [filterStart, setFilterStart] = useState(monthStartStr)
+  const thisMonthRange = getThisMonthRange()
+  const [filterStart, setFilterStart] = useState(thisMonthRange.start)
   const [filterEnd, setFilterEnd] = useState(todayStr)
   const [selectedPreset, setSelectedPreset] = useState<string>('This Month')
 
-  const monthEndStr = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10)
   const DATE_PRESETS = [
     { label: 'Today',      start: todayStr, end: todayStr },
     { label: 'This Week',  start: new Date(Date.now() - 6 * 86400000).toISOString().slice(0, 10), end: todayStr },
-    { label: 'This Month', start: monthStartStr, end: monthEndStr },
+    { label: 'This Month', start: thisMonthRange.start, end: todayStr },
   ]
 
   const [showExpForm, setShowExpForm] = useState(false)
@@ -78,6 +109,15 @@ export default function ExpensesPage() {
   }, [filterStart, filterEnd])
 
   useEffect(() => { load() }, [load])
+
+  // When calendar preference changes, switch to This Month view automatically
+  useEffect(() => {
+    const newRange = getThisMonthRange()
+    setFilterStart(newRange.start)
+    setFilterEnd(newRange.end)
+    setSelectedPreset('This Month')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFormat])
 
   const normalExpenses = useMemo(() => expenses.filter(e => !isTester(e)), [expenses])
   const testerExpenses = useMemo(() => expenses.filter(e => isTester(e)), [expenses])

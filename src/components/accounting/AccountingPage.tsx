@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useAuthStore } from '../../store/authStore'
+import { useSettings } from '../../hooks/useSettings'
+import { adToBS, bsToAD, getDaysInBS } from '../../utils/dateConverter'
 import { RefreshCw, Calendar } from 'lucide-react'
 import toast from 'react-hot-toast'
 import LoadingSpinner from '../shared/LoadingSpinner'
@@ -506,10 +508,41 @@ async function fetchAccountingData(businessId: string, from: string, to: string)
 }
 
 export default function AccountingPage() {
+  const { settings } = useSettings()
+  const dateFormat = settings?.date_format ?? 'AD'
+  
+  // Calculate this month's start and end based on calendar type
+  const getThisMonthRange = () => {
+    if (dateFormat === 'BS') {
+      const todayBS = adToBS(new Date())
+      const monthStartBS = { year: todayBS.year, month: todayBS.month, day: 1 }
+      const monthEndBS = {
+        year: todayBS.year,
+        month: todayBS.month,
+        day: getDaysInBS(todayBS.year, todayBS.month),
+      }
+      return {
+        start: bsToAD(monthStartBS).toISOString().slice(0, 10),
+        end: bsToAD(monthEndBS).toISOString().slice(0, 10),
+      }
+    } else {
+      // Use UTC to avoid timezone issues (e.g., April 1 local becoming March 31 UTC)
+      const now = new Date()
+      const year = now.getUTCFullYear()
+      const month = now.getUTCMonth()
+      const start = `${year}-${String(month + 1).padStart(2, '0')}-01`
+      // Last day of month: get first day of next month, subtract 1 day
+      const nextMonthDate = new Date(Date.UTC(year, month + 1, 1))
+      nextMonthDate.setUTCDate(0)
+      const end = nextMonthDate.toISOString().slice(0, 10)
+      return { start, end }
+    }
+  }
+  
   const todayStr = new Date().toISOString().slice(0, 10)
-  const monthStartStr = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10)
+  const thisMonthRange = getThisMonthRange()
 
-  const [startDate, setStartDate] = useState(monthStartStr)
+  const [startDate, setStartDate] = useState(thisMonthRange.start)
   const [endDate, setEndDate] = useState(todayStr)
   const [selectedPreset, setSelectedPreset] = useState<string>('This Month')
   const [data, setData] = useState<AccountingData | null>(null)
@@ -523,16 +556,52 @@ export default function AccountingPage() {
   const businessId = user?.business_id || ''
 
   const getPresets = () => {
-    const now = new Date()
-    const todayStr = now.toISOString().slice(0, 10)
-    const monthStartStr = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
-    const monthEndStr = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10)
-    const weekStart = new Date(Date.now() - 6 * 86_400_000).toISOString().slice(0, 10)
-    return [
-      { label: 'Today',      start: todayStr, end: todayStr },
-      { label: 'This Week',  start: weekStart, end: todayStr },
-      { label: 'This Month', start: monthStartStr, end: monthEndStr },
-    ]
+    if (dateFormat === 'BS') {
+      const todayBS = adToBS(new Date())
+      const monthStartBS = { year: todayBS.year, month: todayBS.month, day: 1 }
+      const monthEndBS = {
+        year: todayBS.year,
+        month: todayBS.month,
+        day: getDaysInBS(todayBS.year, todayBS.month),
+      }
+      const todayADStr = bsToAD({ year: todayBS.year, month: todayBS.month, day: todayBS.day }).toISOString().slice(0, 10)
+      const monthStartADStr = bsToAD(monthStartBS).toISOString().slice(0, 10)
+      const monthEndADStr = bsToAD(monthEndBS).toISOString().slice(0, 10)
+      // This week in BS: 6 days before today in BS
+      const weekStartBS = { ...todayBS }
+      weekStartBS.day -= 6
+      if (weekStartBS.day <= 0) {
+        weekStartBS.day += getDaysInBS(weekStartBS.year, weekStartBS.month)
+        weekStartBS.month -= 1
+        if (weekStartBS.month <= 0) {
+          weekStartBS.month = 12
+          weekStartBS.year -= 1
+        }
+      }
+      const weekStartADStr = bsToAD(weekStartBS).toISOString().slice(0, 10)
+      return [
+        { label: 'Today',      start: todayADStr, end: todayADStr },
+        { label: 'This Week',  start: weekStartADStr, end: todayADStr },
+        { label: 'This Month', start: monthStartADStr, end: monthEndADStr },
+      ]
+    } else {
+      // Use UTC to avoid timezone issues
+      const now = new Date()
+      const year = now.getUTCFullYear()
+      const month = now.getUTCMonth()
+      const todayStr = now.toISOString().slice(0, 10)
+      const monthStartStr = `${year}-${String(month + 1).padStart(2, '0')}-01`
+      const nextMonthDate = new Date(Date.UTC(year, month + 1, 1))
+      nextMonthDate.setUTCDate(0)
+      const monthEndStr = nextMonthDate.toISOString().slice(0, 10)
+      const weekStartDate = new Date(Date.now() - 6 * 86_400_000)
+      const weekStart = weekStartDate.toISOString().slice(0, 10)
+      return [
+        { label: 'Today',      start: todayStr, end: todayStr },
+        { label: 'This Week',  start: weekStart, end: todayStr },
+        { label: 'This Month', start: monthStartStr, end: monthEndStr },
+      ]
+    }
   }
   const PRESETS = getPresets()
 
@@ -580,6 +649,15 @@ export default function AccountingPage() {
   useEffect(() => {
     load()
   }, [load])
+
+  // When calendar preference changes, switch to This Month view automatically
+  useEffect(() => {
+    const newRange = getThisMonthRange()
+    setStartDate(newRange.start)
+    setEndDate(newRange.end)
+    setSelectedPreset('This Month')
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dateFormat])
 
   const handleSaveOB = async (input: { cash: number; date: string }) => {
     setSaving(true)
