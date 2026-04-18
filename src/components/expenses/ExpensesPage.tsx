@@ -61,9 +61,9 @@ export default function ExpensesPage() {
 
   const todayStr = new Date().toISOString().slice(0, 10)
   const thisMonthRange = getThisMonthRange()
-  const [filterStart, setFilterStart] = useState(thisMonthRange.start)
+  const [filterStart, setFilterStart] = useState(todayStr)
   const [filterEnd, setFilterEnd] = useState(todayStr)
-  const [selectedPreset, setSelectedPreset] = useState<string>('This Month')
+  const [selectedPreset, setSelectedPreset] = useState<string>('Today')
 
   const DATE_PRESETS = [
     { label: 'Today',      start: todayStr, end: todayStr },
@@ -110,12 +110,12 @@ export default function ExpensesPage() {
 
   useEffect(() => { load() }, [load])
 
-  // When calendar preference changes, switch to This Month view automatically
+  // When calendar preference changes, switch to Today view automatically
   useEffect(() => {
-    const newRange = getThisMonthRange()
-    setFilterStart(newRange.start)
-    setFilterEnd(newRange.end)
-    setSelectedPreset('This Month')
+    const today = new Date().toISOString().slice(0, 10)
+    setFilterStart(today)
+    setFilterEnd(today)
+    setSelectedPreset('Today')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFormat])
 

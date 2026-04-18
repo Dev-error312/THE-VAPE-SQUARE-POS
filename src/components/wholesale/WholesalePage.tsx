@@ -202,12 +202,12 @@ export default function WholesalePage() {
 
   useEffect(() => { load() }, [load])
 
-  // When calendar preference changes, switch to This Month view automatically
+  // When calendar preference changes, switch to Today view automatically
   useEffect(() => {
-    const newRange = getThisMonthRange()
-    setStartDate(newRange.start)
-    setEndDate(newRange.end)
-    setSelectedPreset('This Month')
+    const today = new Date().toISOString().slice(0, 10)
+    setStartDate(today)
+    setEndDate(today)
+    setSelectedPreset('Today')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFormat])
 

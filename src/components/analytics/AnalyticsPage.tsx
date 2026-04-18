@@ -74,9 +74,9 @@ export default function AnalyticsPage() {
   const todayStr = new Date().toISOString().slice(0, 10)
   const thisMonthRange = getThisMonthRange()
 
-  const [startDate, setStartDate] = useState(thisMonthRange.start)
+  const [startDate, setStartDate] = useState(todayStr)
   const [endDate, setEndDate] = useState(todayStr)
-  const [selectedPreset, setSelectedPreset] = useState<string>('This Month')
+  const [selectedPreset, setSelectedPreset] = useState<string>('Today')
   const [rows, setRows] = useState<DayRow[]>([])
   const [paymentTotals, setPaymentTotals] = useState<PaymentTotals>({ cash: 0, online: 0 })
   const [wholesale, setWholesale] = useState<WholesaleSummary>({ total_revenue: 0, total_profit: 0, total_sales: 0 })
@@ -103,10 +103,10 @@ export default function AnalyticsPage() {
 
   // When calendar preference changes, recalculate dates automatically
   useEffect(() => {
-    const newRange = getThisMonthRange()
-    setStartDate(newRange.start)
-    setEndDate(newRange.end)
-    setSelectedPreset('This Month')
+    const today = new Date().toISOString().slice(0, 10)
+    setStartDate(today)
+    setEndDate(today)
+    setSelectedPreset('Today')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFormat])
 

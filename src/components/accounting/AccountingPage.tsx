@@ -542,9 +542,9 @@ export default function AccountingPage() {
   const todayStr = new Date().toISOString().slice(0, 10)
   const thisMonthRange = getThisMonthRange()
 
-  const [startDate, setStartDate] = useState(thisMonthRange.start)
+  const [startDate, setStartDate] = useState(todayStr)
   const [endDate, setEndDate] = useState(todayStr)
-  const [selectedPreset, setSelectedPreset] = useState<string>('This Month')
+  const [selectedPreset, setSelectedPreset] = useState<string>('Today')
   const [data, setData] = useState<AccountingData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -650,12 +650,12 @@ export default function AccountingPage() {
     load()
   }, [load])
 
-  // When calendar preference changes, switch to This Month view automatically
+  // When calendar preference changes, switch to Today view automatically
   useEffect(() => {
-    const newRange = getThisMonthRange()
-    setStartDate(newRange.start)
-    setEndDate(newRange.end)
-    setSelectedPreset('This Month')
+    const today = new Date().toISOString().slice(0, 10)
+    setStartDate(today)
+    setEndDate(today)
+    setSelectedPreset('Today')
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dateFormat])
 
