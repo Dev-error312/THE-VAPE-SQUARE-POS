@@ -77,33 +77,6 @@ export default function WholesalePage() {
   }[]>([])
   const [selectedProductId, setSelectedProductId] = useState('')
 
-  // ── Calculate this month's range (for auto-switch on calendar change) ────
-  const getThisMonthRange = () => {
-    if (dateFormat === 'BS') {
-      const todayBS = adToBS(new Date())
-      const monthStartBS = { year: todayBS.year, month: todayBS.month, day: 1 }
-      const monthEndBS = {
-        year: todayBS.year,
-        month: todayBS.month,
-        day: getDaysInBS(todayBS.year, todayBS.month),
-      }
-      return {
-        start: bsToAD(monthStartBS).toISOString().slice(0, 10),
-        end: bsToAD(monthEndBS).toISOString().slice(0, 10),
-      }
-    } else {
-      // AD calendar
-      const now = new Date()
-      const year = now.getUTCFullYear()
-      const month = now.getUTCMonth()
-      const start = `${year}-${String(month + 1).padStart(2, '0')}-01`
-      const nextMonthDate = new Date(Date.UTC(year, month + 1, 1))
-      nextMonthDate.setUTCDate(0)
-      const end = nextMonthDate.toISOString().slice(0, 10)
-      return { start, end }
-    }
-  }
-
   // ── Presets ───────────────────────────────────────────────────────────
   const getPresets = () => {
     if (dateFormat === 'BS') {

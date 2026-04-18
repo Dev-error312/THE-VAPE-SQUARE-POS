@@ -43,36 +43,7 @@ export default function AnalyticsPage() {
   const { settings } = useSettings()
   const dateFormat = settings?.date_format ?? 'AD'
 
-  // Calculate this month's start and end based on calendar type (using UTC to avoid timezone issues)
-  const getThisMonthRange = () => {
-    if (dateFormat === 'BS') {
-      const todayBS = adToBS(new Date())
-      const monthStartBS = { year: todayBS.year, month: todayBS.month, day: 1 }
-      const monthEndBS = {
-        year: todayBS.year,
-        month: todayBS.month,
-        day: getDaysInBS(todayBS.year, todayBS.month),
-      }
-      return {
-        start: bsToAD(monthStartBS).toISOString().slice(0, 10),
-        end: bsToAD(monthEndBS).toISOString().slice(0, 10),
-      }
-    } else {
-      // Use UTC to avoid timezone issues (e.g., April 1 local becoming March 31 UTC)
-      const now = new Date()
-      const year = now.getUTCFullYear()
-      const month = now.getUTCMonth()
-      const start = `${year}-${String(month + 1).padStart(2, '0')}-01`
-      // Last day of month: get first day of next month, subtract 1 day
-      const nextMonthDate = new Date(Date.UTC(year, month + 1, 1))
-      nextMonthDate.setUTCDate(0)
-      const end = nextMonthDate.toISOString().slice(0, 10)
-      return { start, end }
-    }
-  }
-
   const todayStr = new Date().toISOString().slice(0, 10)
-  const thisMonthRange = getThisMonthRange()
 
   const [startDate, setStartDate] = useState(todayStr)
   const [endDate, setEndDate] = useState(todayStr)
