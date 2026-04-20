@@ -4,6 +4,7 @@ import { useAuthStore } from '../../store/authStore'
 import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AuthLayout from './AuthLayout'
+import EmailConfirmationModal from './EmailConfirmationModal'
 
 // ─── Google Icon SVG ──────────────────────────────────────────────────────────
 function GoogleIcon() {
@@ -25,6 +26,7 @@ export default function AuthPage() {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [rememberMe, setRememberMe] = useState(localStorage.getItem('auth_remember_me') === 'true')
+  const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null)
 
   const { signIn, signInWithGoogle, user, initialized } = useAuthStore()
   const navigate = useNavigate()
@@ -46,7 +48,14 @@ export default function AuthPage() {
     setSubmitting(true)
     try {
       const { error } = await signIn(email, password, rememberMe)
-      if (error) toast.error(error)
+      if (error) {
+        // Check if error is due to unconfirmed email
+        if (error.includes('confirm your email')) {
+          setUnconfirmedEmail(email)
+        } else {
+          toast.error(error)
+        }
+      }
     } finally {
       setSubmitting(false)
     }
@@ -62,6 +71,12 @@ export default function AuthPage() {
     } finally {
       setGoogleLoading(false)
     }
+  }
+
+  const handleBackFromConfirmation = () => {
+    setUnconfirmedEmail(null)
+    setEmail('')
+    setPassword('')
   }
 
   // Don't render form until initialization is complete
@@ -80,7 +95,8 @@ export default function AuthPage() {
   }
 
   return (
-    <AuthLayout>
+    <>
+      <AuthLayout>
       <style>{`
         .form-card {
           width: 100%;
@@ -349,5 +365,13 @@ export default function AuthPage() {
         </div>
       </div>
     </AuthLayout>
+
+      {unconfirmedEmail && (
+        <EmailConfirmationModal
+          email={unconfirmedEmail}
+          onBack={handleBackFromConfirmation}
+        />
+      )}
+    </>
   )
 }

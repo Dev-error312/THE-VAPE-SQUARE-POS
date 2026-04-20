@@ -5,6 +5,7 @@ import toast from 'react-hot-toast'
 import { businessApi } from '../../lib/businessApi'
 import { useAuthStore } from '../../store/authStore'
 import AuthLayout from './AuthLayout'
+import EmailConfirmationModal from './EmailConfirmationModal'
 
 export default function RegisterBusinessPage() {
   const navigate = useNavigate()
@@ -19,6 +20,7 @@ export default function RegisterBusinessPage() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
   const [mounted] = useState(true)
+  const [registeredEmail, setRegisteredEmail] = useState<string | null>(null)
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,18 +49,22 @@ export default function RegisterBusinessPage() {
 
     setLoading(true)
     try {
-      const result = await businessApi.registerBusiness(
+      await businessApi.registerBusiness(
         businessName,
         fullName,
         email,
         password
       )
 
-      if (result.user?.id) {
-        await fetchProfile(result.user.id)
-        toast.success('Business registered successfully!')
-        navigate('/dashboard')
-      }
+      // Show email confirmation modal instead of toast
+      setRegisteredEmail(email)
+      
+      // Reset form
+      setBusinessName('')
+      setFullName('')
+      setEmail('')
+      setPassword('')
+      setConfirmPassword('')
     } catch (err: any) {
       toast.error(err.message || 'Registration failed. Please try again.')
       console.error('Registration error:', err)
@@ -67,9 +73,15 @@ export default function RegisterBusinessPage() {
     }
   }
 
+  const handleBackFromConfirmation = () => {
+    setRegisteredEmail(null)
+    navigate('/auth')
+  }
+
   return (
-    <AuthLayout>
-      <style>{`
+    <>
+      <AuthLayout>
+        <style>{`
         .form-card {
           width: 100%;
           max-width: 420px;
@@ -346,6 +358,15 @@ export default function RegisterBusinessPage() {
           </button>
         </div>
       </div>
-    </AuthLayout>
+      </AuthLayout>
+
+      {/* Show email confirmation modal after successful registration */}
+      {registeredEmail && (
+        <EmailConfirmationModal 
+          email={registeredEmail}
+          onBack={handleBackFromConfirmation}
+        />
+      )}
+    </>
   )
 }

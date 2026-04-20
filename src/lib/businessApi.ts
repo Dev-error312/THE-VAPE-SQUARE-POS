@@ -8,61 +8,84 @@ export const businessApi = {
     password: string
   ) {
     try {
-      // Step 1: Create Supabase auth user
+      // Step 1: Create auth user using client-side signUp
+      // This automatically sends confirmation email
+      console.log("Creating auth user via signUp:", email)
       const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
+        email: email.toLowerCase(),
+        password: password,
         options: {
-          data: { full_name: fullName }
+          data: {
+            full_name: fullName
+          }
         }
       })
 
-      if (authError) throw new Error(authError.message)
-      if (!authData.user) throw new Error('Failed to create auth user')
+      if (authError) {
+        console.error("Auth signup error:", authError)
+        if (authError.message?.includes("already exists") || authError.message?.includes("duplicate")) {
+          throw new Error("This email address is already registered. Please sign in or use a different email.")
+        }
+        throw new Error(authError.message || 'Signup failed')
+      }
 
-      const authUserId = authData.user.id
+      if (!authData.user?.id) {
+        throw new Error('Failed to create user')
+      }
 
-      // Step 2: Create business record
-      const { data: businessData, error: businessError } = await supabase
-        .from('businesses')
-        .insert([{ name: businessName }])
-        .select()
-        .single()
+      const userId = authData.user.id
+      console.log("Auth user created:", userId)
 
-      if (businessError) throw new Error(`Failed to create business: ${businessError.message}`)
-      if (!businessData) throw new Error('Failed to create business')
+      // Step 2: Create business and user profile via Edge Function
+      console.log("Creating business record")
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-business`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          },
+          body: JSON.stringify({ 
+            userId,
+            businessName,
+            fullName,
+            email: email.toLowerCase()
+          })
+        }
+      )
 
-      const businessId = businessData.id
+      // Parse the response body
+      let responseData: any
+      try {
+        responseData = await response.json()
+      } catch (e) {
+        console.error('Failed to parse response:', e)
+        throw new Error('Invalid response from server')
+      }
 
-      // Step 3: Create user profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .insert([{
-          auth_user_id: authUserId,
-          business_id: businessId,
-          email,
-          name: fullName,
-          role: 'admin',
-          created_at: new Date().toISOString()
-        }])
-        .select()
-        .single()
+      // Check if request was successful
+      if (!response.ok) {
+        // Extract and throw the error message
+        const errorMessage = responseData?.error || `Failed to create business with status ${response.status}`
+        throw new Error(errorMessage)
+      }
 
-      if (profileError) throw new Error(`Failed to create user profile: ${profileError.message}`)
-      if (!profileData) throw new Error('Failed to create user profile')
+      // Success case
+      if (!responseData?.business?.id) {
+        throw new Error('Failed to create business - no business ID returned')
+      }
 
-      // Step 4: Auto-login the user
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-
-      if (signInError) throw new Error(`Login after registration failed: ${signInError.message}`)
-
-      return { success: true, user: authData.user, business: businessData }
+      // Return user and business data
+      return { 
+        success: true, 
+        user: authData.user, 
+        business: responseData.business,
+        profile: responseData.profile
+      }
     } catch (error: any) {
-      console.error('Registration error:', error)
-      throw error
+      // Re-throw with the message so the UI can display it
+      throw new Error(error?.message || 'Registration failed. Please try again.')
     }
   }
 }
