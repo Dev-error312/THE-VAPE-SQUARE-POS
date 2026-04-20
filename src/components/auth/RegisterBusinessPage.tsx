@@ -3,13 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { businessApi } from '../../lib/businessApi'
-import { useAuthStore } from '../../store/authStore'
 import AuthLayout from './AuthLayout'
 import EmailConfirmationModal from './EmailConfirmationModal'
 
 export default function RegisterBusinessPage() {
   const navigate = useNavigate()
-  const fetchProfile = useAuthStore((s) => s.fetchProfile)
   
   const [businessName, setBusinessName] = useState('')
   const [fullName, setFullName] = useState('')
