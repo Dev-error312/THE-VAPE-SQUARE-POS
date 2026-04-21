@@ -5,6 +5,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import toast from 'react-hot-toast'
 import AuthLayout from './AuthLayout'
 import EmailConfirmationModal from './EmailConfirmationModal'
+import ForgotPasswordModal from './ForgotPasswordModal'
 
 // ─── Google Icon SVG ──────────────────────────────────────────────────────────
 function GoogleIcon() {
@@ -27,6 +28,7 @@ export default function AuthPage() {
   const [mounted, setMounted] = useState(false)
   const [rememberMe, setRememberMe] = useState(localStorage.getItem('auth_remember_me') === 'true')
   const [unconfirmedEmail, setUnconfirmedEmail] = useState<string | null>(null)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
 
   const { signIn, signInWithGoogle, user, initialized } = useAuthStore()
   const navigate = useNavigate()
@@ -341,6 +343,17 @@ export default function AuthPage() {
             </div>
           </div>
 
+          <div style={{ textAlign: 'right', marginBottom: '1rem' }}>
+            <button
+              type="button"
+              className="footer-link"
+              onClick={() => setShowForgotPassword(true)}
+              style={{ fontSize: '0.8125rem', marginTop: '0.25rem' }}
+            >
+              Forgot password?
+            </button>
+          </div>
+
           <div className="checkbox-group">
             <input
               type="checkbox"
@@ -372,6 +385,11 @@ export default function AuthPage() {
           onBack={handleBackFromConfirmation}
         />
       )}
+
+      <ForgotPasswordModal
+        isOpen={showForgotPassword}
+        onClose={() => setShowForgotPassword(false)}
+      />
     </>
   )
 }

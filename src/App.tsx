@@ -6,6 +6,7 @@ import { SettingsProvider } from './context/SettingsContext'
 
 import AuthPage from './components/auth/AuthPage'
 import RegisterBusinessPage from './components/auth/RegisterBusinessPage'
+import ResetPasswordPage from './components/auth/ResetPasswordPage'
 import AuthCallbackPage from './components/auth/AuthCallbackPage'
 import Layout from './components/shared/Layout'
 import ProtectedRoute from './components/shared/ProtectedRoute'
@@ -65,6 +66,7 @@ export default function App() {
         <Routes>
         <Route path="/login"          element={<AuthPage />} />
         <Route path="/register"       element={<RegisterBusinessPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/auth-callback"  element={<AuthCallbackPage />} />
         <Route path="/"               element={wrap(<Navigate to="/dashboard" replace />)} />
         <Route path="/dashboard" element={wrap(<DashboardPage />)} />
