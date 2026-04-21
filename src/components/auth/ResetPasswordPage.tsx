@@ -20,19 +20,46 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     setMounted(true)
+    console.log('🔄 ResetPasswordPage mounted')
+    console.log('📍 Current URL:', window.location.href)
+    console.log('📍 Hash:', window.location.hash)
   }, [])
 
-  // Check if we have the reset token in the URL
+  // Check if we have the reset token in the URL and validate session
   useEffect(() => {
-    const hash = window.location.hash
-    const params = new URLSearchParams(hash.replace('#', ''))
-    const accessToken = params.get('access_token')
-    const type = params.get('type')
+    const validateResetLink = async () => {
+      const hash = window.location.hash
+      const params = new URLSearchParams(hash.replace('#', ''))
+      const accessToken = params.get('access_token')
+      const type = params.get('type')
 
-    if (!accessToken || type !== 'recovery') {
-      setStep('error')
-      setError('Invalid or expired reset link. Please request a new one.')
+      // Check URL parameters
+      if (!accessToken || type !== 'recovery') {
+        console.error('❌ Invalid reset link - missing token or wrong type')
+        setStep('error')
+        setError('Invalid or expired reset link. Please request a new one.')
+        return
+      }
+
+      // Wait a moment for Supabase to process the URL hash and establish session
+      // This is crucial - Supabase needs time to detect and set the session from the hash
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Check if we have an active session with the reset token
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+
+      if (sessionError || !session) {
+        console.error('❌ No session after reset link - token may be invalid or expired')
+        console.error('Session error:', sessionError)
+        setStep('error')
+        setError('Invalid or expired reset link. Please request a new one.')
+        return
+      }
+
+      console.log('✅ Session established from reset link')
     }
+
+    validateResetLink()
   }, [])
 
   const validatePassword = (password: string): boolean => {
@@ -60,12 +87,27 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
+      // Check session exists before attempting password reset
+      const { data: { session }, error: sessionCheckError } = await supabase.auth.getSession()
+
+      if (sessionCheckError || !session) {
+        console.error('❌ No active session for password reset')
+        console.error('Session check error:', sessionCheckError)
+        setError('Session expired. Please request a new password reset link.')
+        setStep('error')
+        toast.error('Session expired. Please request a new password reset link.')
+        return
+      }
+
+      console.log('✅ Session confirmed, updating password...')
+
       // Update password
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       })
 
       if (updateError) {
+        console.error('❌ Password update failed:', updateError)
         setError(updateError.message)
         setStep('error')
         toast.error(`Failed to reset password: ${updateError.message}`)
@@ -73,6 +115,7 @@ export default function ResetPasswordPage() {
       }
 
       // Success!
+      console.log('✅ Password updated successfully')
       setStep('success')
       toast.success('Password reset successfully!')
 
@@ -82,6 +125,7 @@ export default function ResetPasswordPage() {
       }, 2000)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred'
+      console.error('❌ Exception during password reset:', message, err)
       setError(message)
       setStep('error')
       toast.error(message)

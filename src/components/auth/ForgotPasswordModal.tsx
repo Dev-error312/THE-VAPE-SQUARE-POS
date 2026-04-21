@@ -34,9 +34,19 @@ export default function ForgotPasswordModal({ isOpen, onClose }: ForgotPasswordM
         console.error('Error Message:', resetError.message)
         
         // Show error to user if it's a real error
-        if (resetError.message && !resetError.message.includes('unexpected')) {
-          setError(`Unable to send reset email: ${resetError.message}`)
-          toast.error(`Unable to send reset email: ${resetError.message}`)
+        if (resetError.message) {
+          // Handle rate limiting specifically
+          if (resetError.message.includes('rate limit')) {
+            setError('Too many reset attempts. Please wait a few minutes before trying again.')
+            toast.error('Rate limited: Please wait before requesting another reset link')
+          } else if (resetError.message.includes('unexpected')) {
+            // For generic/unexpected errors, show success message for security
+            setStep('success')
+            toast.success('If an account exists with this email, a reset link has been sent')
+          } else {
+            setError(`Unable to send reset email: ${resetError.message}`)
+            toast.error(`Unable to send reset email: ${resetError.message}`)
+          }
         } else {
           // For security, show success message for unknown errors
           setStep('success')
