@@ -89,16 +89,61 @@ export const useAuthStore = create<AuthState>((set) => ({
       
       // Session retrieval failed (could be network error or invalid token)
       if (error) {
-        // If it's a refresh token error, clear the session
-        if (error.message?.includes('refresh') || error.message?.includes('Invalid')) {
-          await supabase.auth.signOut().catch(() => {}) // Silently fail if already signed out
+        console.warn('⚠️ Session expired, re-establishing from stored tokens...')
+        console.debug('Session error details:', {
+          message: error.message,
+          status: (error as any)?.status,
+          code: (error as any)?.code,
+        })
+        
+        // Try to refresh the token using the refresh token
+        try {
+          const refreshToken = localStorage.getItem('supabase.auth.token')?.includes('refresh_token')
+            ? JSON.parse(localStorage.getItem('supabase.auth.token') || '{}').refresh_token
+            : sessionStorage.getItem('supabase.auth.token')?.includes('refresh_token')
+            ? JSON.parse(sessionStorage.getItem('supabase.auth.token') || '{}').refresh_token
+            : null
+
+          if (refreshToken) {
+            console.debug('Attempting to refresh session with stored refresh token...')
+            const { data: refreshedSession, error: refreshError } = await supabase.auth.refreshSession()
+            if (!refreshError && refreshedSession?.session) {
+              console.log('✅ Session refreshed successfully')
+              // Successfully refreshed - load user profile
+              try {
+                const user = await getOrCreateUserProfile(refreshedSession.session.user)
+                set({ session: refreshedSession.session, user, loading: false, initialized: true, rememberMe })
+                return
+              } catch (profileError) {
+                console.error('Failed to load profile after refresh:', profileError)
+                set({ user: null, session: null, loading: false, initialized: true, rememberMe })
+                return
+              }
+            } else if (refreshError) {
+              console.error('❌ Failed to re-establish session: AuthSessionMissingError: Auth session missing!')
+              console.debug('Refresh error details:', {
+                message: refreshError.message,
+                status: (refreshError as any)?.status,
+                code: (refreshError as any)?.code,
+              })
+            }
+          } else {
+            console.warn('No refresh token found in storage')
+          }
+        } catch (refreshError) {
+          console.error('Token refresh attempt threw error:', refreshError)
         }
+
+        // If refresh failed or no refresh token, clear the session
+        console.log('Clearing invalid session...')
+        await supabase.auth.signOut().catch(() => {})
         set({ user: null, session: null, loading: false, initialized: true, rememberMe })
         return
       }
       
       // No session found
       if (!session) {
+        console.debug('No session found in storage')
         set({ user: null, session: null, loading: false, initialized: true, rememberMe })
         return
       }
@@ -107,6 +152,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (!rememberMe) {
         // If not remembering me, clear the session immediately
         // This will log them out when they close the app
+        console.debug('Remember Me not selected, clearing session')
         await supabase.auth.signOut().catch(() => {})
         set({ user: null, session: null, loading: false, initialized: true, rememberMe: false })
         return
@@ -115,6 +161,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       // Session exists and user selected "Remember Me", load user profile
       try {
         const user = await getOrCreateUserProfile(session.user)
+        console.log('✅ Session restored and profile loaded')
         set({ session, user, loading: false, initialized: true, rememberMe: true })
       } catch (profileError) {
         console.error('Failed to load profile:', profileError)

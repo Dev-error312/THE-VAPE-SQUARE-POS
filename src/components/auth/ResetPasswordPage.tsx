@@ -5,7 +5,7 @@ import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 import AuthLayout from './AuthLayout'
 
-type ResetStep = 'form' | 'success' | 'error'
+type ResetStep = 'waiting' | 'form' | 'success' | 'error'
 
 export default function ResetPasswordPage() {
   const [newPassword, setNewPassword] = useState('')
@@ -13,10 +13,10 @@ export default function ResetPasswordPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [loading, setLoading] = useState(false)
-  const [step, setStep] = useState<ResetStep>('form')
+  const [step, setStep] = useState<ResetStep>('waiting')
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
-  const [resetTokens, setResetTokens] = useState<{ access: string; refresh: string } | null>(null)
+  const [sessionReady, setSessionReady] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -26,61 +26,51 @@ export default function ResetPasswordPage() {
     console.log('📍 Hash:', window.location.hash)
   }, [])
 
-  // Check if we have the reset token in the URL and validate session
+  // Listen for PASSWORD_RECOVERY event - Supabase automatically exchanges hash tokens
+  // This is the signal that the reset token has been successfully validated
   useEffect(() => {
-    const validateResetLink = async () => {
-      const hash = window.location.hash
-      const params = new URLSearchParams(hash.replace('#', ''))
-      const accessToken = params.get('access_token')
-      const refreshToken = params.get('refresh_token')
-      const type = params.get('type')
-
-      // Check URL parameters
-      if (!accessToken || type !== 'recovery') {
-        console.error('❌ Invalid reset link - missing token or wrong type')
-        setStep('error')
-        setError('Invalid or expired reset link. Please request a new one.')
-        return
+    console.log('⏳ Waiting for PASSWORD_RECOVERY event from Supabase...')
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('🔐 Auth state change:', event, 'Session:', !!session)
+      
+      if (event === 'PASSWORD_RECOVERY' && session) {
+        console.log('✅ PASSWORD_RECOVERY event received - reset link is valid!')
+        setSessionReady(true)
+        setStep('form')
+        setError('')
+      } else if (event === 'SIGNED_OUT') {
+        console.warn('⚠️ Session lost during password reset')
+        // Don't treat as error - user might have naturally signed out
       }
+    })
 
-      // Store tokens in state for later use (in case session expires)
-      setResetTokens({
-        access: accessToken,
-        refresh: refreshToken || accessToken, // Fallback to access token if refresh not provided
-      })
-
-      // Try to set the session with tokens from the reset link
-      const { error: setSessionError } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken || accessToken,
-      })
-
-      if (setSessionError) {
-        console.warn('⚠️ Could not auto-set session, but tokens are stored:', setSessionError)
-        // Don't fail here - user can still reset password with stored tokens
-      } else {
-        console.log('✅ Session established from reset link')
-      }
-
-      // Verify we can at least get session info
+    // Also check if we already have a valid session (in case event was processed before this mounted)
+    const checkSession = async () => {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
       if (sessionError) {
-        console.warn('⚠️ Session check error:', sessionError)
-        // Continue anyway - we have the tokens stored
-      }
-      
-      if (!session && !accessToken) {
-        console.error('❌ No session and no valid token')
+        console.error('❌ Session check error:', sessionError)
         setStep('error')
         setError('Invalid or expired reset link. Please request a new one.')
         return
       }
-
-      console.log('✅ Reset link validated, ready for password reset')
+      
+      if (session) {
+        console.log('✅ Session already exists from reset link')
+        setSessionReady(true)
+        setStep('form')
+      } else {
+        console.warn('⏳ Waiting for hash token exchange...')
+      }
     }
 
-    validateResetLink()
+    // Delay check slightly to let Supabase process the hash
+    const timeout = setTimeout(checkSession, 500)
+
+    return () => {
+      clearTimeout(timeout)
+      subscription.unsubscribe()
+    }
   }, [])
 
   const validatePassword = (password: string): boolean => {
@@ -95,6 +85,11 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     setError('')
 
+    if (!sessionReady) {
+      setError('Session not ready. Please use the link from your email.')
+      return
+    }
+
     // Validate passwords
     if (!validatePassword(newPassword)) {
       return
@@ -108,44 +103,9 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
-      // Check if session is still active
-      let { data: { session }, error: sessionCheckError } = await supabase.auth.getSession()
-
-      // If no session but we have stored tokens, re-establish the session
-      if ((!session || sessionCheckError) && resetTokens) {
-        console.log('⚠️ Session expired, re-establishing from stored tokens...')
-        
-        const { error: reAuthError } = await supabase.auth.setSession({
-          access_token: resetTokens.access,
-          refresh_token: resetTokens.refresh,
-        })
-
-        if (reAuthError) {
-          console.error('❌ Failed to re-establish session:', reAuthError)
-          setError('Reset link expired. Please request a new password reset.')
-          setStep('error')
-          toast.error('Reset link expired. Please request a new password reset.')
-          return
-        }
-
-        // Get the session again after re-establishing
-        const { data: newSessionData, error: newSessionError } = await supabase.auth.getSession()
-        session = newSessionData.session
-        sessionCheckError = newSessionError
-      }
-
-      if (sessionCheckError || !session) {
-        console.error('❌ No active session for password reset')
-        console.error('Session check error:', sessionCheckError)
-        setError('Session expired. Please request a new password reset link.')
-        setStep('error')
-        toast.error('Session expired. Please request a new password reset link.')
-        return
-      }
-
-      console.log('✅ Session confirmed, updating password...')
-
-      // Update password
+      console.log('🔄 Updating password...')
+      
+      // At this point, PASSWORD_RECOVERY event has fired, so session is valid
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       })
@@ -163,9 +123,12 @@ export default function ResetPasswordPage() {
       setStep('success')
       toast.success('Password reset successfully!')
 
+      // Sign them out so they log in with new password
+      await supabase.auth.signOut().catch(() => {})
+
       // Redirect to login after 2 seconds
       setTimeout(() => {
-        navigate('/login', { replace: true })
+        navigate('/auth', { replace: true })
       }, 2000)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'An error occurred'
@@ -344,6 +307,18 @@ export default function ResetPasswordPage() {
       `}</style>
 
       <div className={`form-card ${mounted ? 'mounted' : ''}`}>
+        {step === 'waiting' && (
+          <div className="success-card">
+            <div className="w-12 h-12 mx-auto mb-4">
+              <div className="w-full h-full border-2 border-slate-200 dark:border-slate-700 border-t-indigo-500 rounded-full animate-spin" />
+            </div>
+            <p className="success-title">Verifying Reset Link</p>
+            <p className="success-text">
+              Please wait while we validate your password reset link...
+            </p>
+          </div>
+        )}
+
         {step === 'form' && (
           <>
             <p className="form-title">Reset Password</p>
@@ -353,6 +328,13 @@ export default function ResetPasswordPage() {
               <div className="error-box">
                 <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <span>{error}</span>
+              </div>
+            )}
+
+            {!sessionReady && (
+              <div className="error-box">
+                <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                <span>Session not ready. Please use the link from your email.</span>
               </div>
             )}
 
@@ -366,6 +348,7 @@ export default function ResetPasswordPage() {
                     placeholder="••••••••"
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    disabled={!sessionReady || loading}
                     required
                     minLength={6}
                   />
@@ -373,6 +356,7 @@ export default function ResetPasswordPage() {
                     type="button"
                     className="pw-toggle"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={!sessionReady}
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -388,6 +372,7 @@ export default function ResetPasswordPage() {
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={!sessionReady || loading}
                     required
                     minLength={6}
                   />
@@ -395,6 +380,7 @@ export default function ResetPasswordPage() {
                     type="button"
                     className="pw-toggle"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    disabled={!sessionReady}
                   >
                     {showConfirmPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
@@ -403,7 +389,7 @@ export default function ResetPasswordPage() {
 
               <button
                 type="submit"
-                disabled={loading || !newPassword || !confirmPassword}
+                disabled={loading || !newPassword || !confirmPassword || !sessionReady}
                 className="btn-submit"
               >
                 {loading ? (
@@ -436,7 +422,7 @@ export default function ResetPasswordPage() {
             <AlertCircle className="success-icon" style={{ color: '#ef4444' }} />
             <p className="success-title">Unable to Reset Password</p>
             <p className="success-text">{error}</p>
-            <a href="/login" className="back-link-btn">
+            <a href="/auth" className="back-link-btn">
               Back to Login
             </a>
           </div>
