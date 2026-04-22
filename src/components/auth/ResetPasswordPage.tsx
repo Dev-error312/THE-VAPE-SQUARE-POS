@@ -16,7 +16,6 @@ export default function ResetPasswordPage() {
   const [step, setStep] = useState<ResetStep>('waiting')
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
-  const [sessionReady, setSessionReady] = useState(false)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -32,7 +31,6 @@ export default function ResetPasswordPage() {
     console.log('⏳ Waiting for PASSWORD_RECOVERY event from Supabase...')
     console.log('🔗 URL:', window.location.href)
     
-    let isAuthStateChecked = false
     let sessionCheckAttempts = 0
     const maxAttempts = 10
     
@@ -41,8 +39,6 @@ export default function ResetPasswordPage() {
       
       if (event === 'PASSWORD_RECOVERY' && session) {
         console.log('✅ PASSWORD_RECOVERY event received - reset link is valid!')
-        isAuthStateChecked = true
-        setSessionReady(true)
         setStep('form')
         setError('')
       } else if (event === 'SIGNED_OUT') {
@@ -71,8 +67,6 @@ export default function ResetPasswordPage() {
         
         if (session) {
           console.log('✅ Session exists from reset link')
-          isAuthStateChecked = true
-          setSessionReady(true)
           setStep('form')
           return
         }
