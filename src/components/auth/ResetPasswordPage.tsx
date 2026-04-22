@@ -16,6 +16,7 @@ export default function ResetPasswordPage() {
   const [step, setStep] = useState<ResetStep>('form')
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
+  const [resetTokens, setResetTokens] = useState<{ access: string; refresh: string } | null>(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -42,34 +43,41 @@ export default function ResetPasswordPage() {
         return
       }
 
-      // Explicitly set the session with tokens from the reset link
-      // This is more reliable than relying on automatic detection
-      if (refreshToken) {
-        const { error: setSessionError } = await supabase.auth.setSession({
-          access_token: accessToken,
-          refresh_token: refreshToken,
-        })
+      // Store tokens in state for later use (in case session expires)
+      setResetTokens({
+        access: accessToken,
+        refresh: refreshToken || accessToken, // Fallback to access token if refresh not provided
+      })
 
-        if (setSessionError) {
-          console.error('❌ Failed to set session from reset link:', setSessionError)
-          setStep('error')
-          setError('Invalid or expired reset link. Please request a new one.')
-          return
-        }
+      // Try to set the session with tokens from the reset link
+      const { error: setSessionError } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken || accessToken,
+      })
+
+      if (setSessionError) {
+        console.warn('⚠️ Could not auto-set session, but tokens are stored:', setSessionError)
+        // Don't fail here - user can still reset password with stored tokens
+      } else {
+        console.log('✅ Session established from reset link')
       }
 
-      // Verify session is established
+      // Verify we can at least get session info
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-
-      if (sessionError || !session) {
-        console.error('❌ No session after reset link - token may be invalid or expired')
-        console.error('Session error:', sessionError)
+      
+      if (sessionError) {
+        console.warn('⚠️ Session check error:', sessionError)
+        // Continue anyway - we have the tokens stored
+      }
+      
+      if (!session && !accessToken) {
+        console.error('❌ No session and no valid token')
         setStep('error')
         setError('Invalid or expired reset link. Please request a new one.')
         return
       }
 
-      console.log('✅ Session established from reset link')
+      console.log('✅ Reset link validated, ready for password reset')
     }
 
     validateResetLink()
@@ -100,8 +108,31 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
-      // Check session exists before attempting password reset
-      const { data: { session }, error: sessionCheckError } = await supabase.auth.getSession()
+      // Check if session is still active
+      let { data: { session }, error: sessionCheckError } = await supabase.auth.getSession()
+
+      // If no session but we have stored tokens, re-establish the session
+      if ((!session || sessionCheckError) && resetTokens) {
+        console.log('⚠️ Session expired, re-establishing from stored tokens...')
+        
+        const { error: reAuthError } = await supabase.auth.setSession({
+          access_token: resetTokens.access,
+          refresh_token: resetTokens.refresh,
+        })
+
+        if (reAuthError) {
+          console.error('❌ Failed to re-establish session:', reAuthError)
+          setError('Reset link expired. Please request a new password reset.')
+          setStep('error')
+          toast.error('Reset link expired. Please request a new password reset.')
+          return
+        }
+
+        // Get the session again after re-establishing
+        const { data: newSessionData, error: newSessionError } = await supabase.auth.getSession()
+        session = newSessionData.session
+        sessionCheckError = newSessionError
+      }
 
       if (sessionCheckError || !session) {
         console.error('❌ No active session for password reset')
