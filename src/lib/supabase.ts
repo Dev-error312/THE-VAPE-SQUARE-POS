@@ -18,14 +18,17 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // If user checked "Remember Me", use localStorage (persistent)
 class ConditionalStorage {
   getItem(key: string): string | null {
+    // For auth tokens, always use localStorage to ensure consistency
+    // This is especially important for password reset flows
     const rememberMe = localStorage.getItem('auth_remember_me') === 'true'
-    const storage = rememberMe ? localStorage : sessionStorage
+    const storage = rememberMe ? localStorage : localStorage
     return storage.getItem(key)
   }
 
   setItem(key: string, value: string): void {
+    // For auth tokens, always use localStorage
     const rememberMe = localStorage.getItem('auth_remember_me') === 'true'
-    const storage = rememberMe ? localStorage : sessionStorage
+    const storage = rememberMe ? localStorage : localStorage
     storage.setItem(key, value)
   }
 

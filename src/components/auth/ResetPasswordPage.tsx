@@ -31,6 +31,7 @@ export default function ResetPasswordPage() {
       const hash = window.location.hash
       const params = new URLSearchParams(hash.replace('#', ''))
       const accessToken = params.get('access_token')
+      const refreshToken = params.get('refresh_token')
       const type = params.get('type')
 
       // Check URL parameters
@@ -41,11 +42,23 @@ export default function ResetPasswordPage() {
         return
       }
 
-      // Wait a moment for Supabase to process the URL hash and establish session
-      // This is crucial - Supabase needs time to detect and set the session from the hash
-      await new Promise(resolve => setTimeout(resolve, 500))
+      // Explicitly set the session with tokens from the reset link
+      // This is more reliable than relying on automatic detection
+      if (refreshToken) {
+        const { error: setSessionError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        })
 
-      // Check if we have an active session with the reset token
+        if (setSessionError) {
+          console.error('❌ Failed to set session from reset link:', setSessionError)
+          setStep('error')
+          setError('Invalid or expired reset link. Please request a new one.')
+          return
+        }
+      }
+
+      // Verify session is established
       const { data: { session }, error: sessionError } = await supabase.auth.getSession()
 
       if (sessionError || !session) {
