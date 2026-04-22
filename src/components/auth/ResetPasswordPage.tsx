@@ -139,35 +139,24 @@ export default function ResetPasswordPage() {
     try {
       console.log('🔄 Updating password...')
       
-      // Even if sessionReady is false, try to update - Supabase might have the session
-      const { data: { user }, error: getUserError } = await supabase.auth.getUser()
-      
-      if (getUserError) {
-        console.error('❌ Cannot get user before password update:', getUserError)
-        setError('Unable to verify your identity. Please use a fresh reset link.')
-        setStep('error')
-        setLoading(false)
-        return
-      }
-      
-      if (!user) {
-        console.error('❌ No authenticated user found')
-        setError('Session expired. Please request a new password reset link.')
-        setStep('error')
-        setLoading(false)
-        return
-      }
-      
-      console.log('✅ User verified, proceeding with password update')
-      
-      // Update the password
+      // Password recovery tokens don't require getUser() verification
+      // The token itself is the authorization - just attempt the update directly
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       })
 
       if (updateError) {
         console.error('❌ Password update failed:', updateError)
-        setError(updateError.message)
+        
+        // Provide specific error messages based on the error type
+        if (updateError.message?.includes('session')) {
+          setError('Session expired. Please use a fresh reset link from your email.')
+        } else if (updateError.message?.includes('invalid')) {
+          setError('Invalid reset link. Please request a new password reset.')
+        } else {
+          setError(updateError.message || 'Failed to reset password. Please try again.')
+        }
+        
         setStep('error')
         toast.error(`Failed to reset password: ${updateError.message}`)
         setLoading(false)
