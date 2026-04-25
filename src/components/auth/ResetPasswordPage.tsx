@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 import AuthLayout from './AuthLayout'
+import type { Session } from '@supabase/supabase-js'
 
 type ResetStep = 'waiting' | 'form' | 'success' | 'error'
 
@@ -16,100 +17,60 @@ export default function ResetPasswordPage() {
   const [step, setStep] = useState<ResetStep>('waiting')
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
+
+  // Store the recovery session so we can restore it before updateUser
+  // even if a SIGNED_OUT event fires in between
+  const recoverySessionRef = useRef<Session | null>(null)
+
   const navigate = useNavigate()
 
   useEffect(() => {
     setMounted(true)
-    console.log('🔄 ResetPasswordPage mounted')
-    console.log('📍 Current URL:', window.location.href)
-    console.log('📍 Hash:', window.location.hash)
   }, [])
 
-  // Listen for PASSWORD_RECOVERY event - Supabase automatically exchanges hash tokens
-  // This is the signal that the reset token has been successfully validated
   useEffect(() => {
-    console.log('⏳ Waiting for PASSWORD_RECOVERY event from Supabase...')
-    console.log('🔗 URL:', window.location.href)
-    
-    let sessionCheckAttempts = 0
-    const maxAttempts = 10
-    
+    console.log('⏳ Waiting for PASSWORD_RECOVERY event...')
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('🔐 Auth state change:', event, 'Session:', !!session)
-      
+
       if (event === 'PASSWORD_RECOVERY' && session) {
-        console.log('✅ PASSWORD_RECOVERY event received - reset link is valid!')
+        console.log('✅ PASSWORD_RECOVERY received — storing session')
+        // Capture the session; even if SIGNED_OUT fires later, we hold the reference
+        recoverySessionRef.current = session
         setStep('form')
         setError('')
-      } else if (event === 'SIGNED_OUT') {
-        console.warn('⚠️ Session lost during password reset')
-        // Don't treat as error - user might have naturally signed out
       }
     })
 
-    // Check if we already have a valid session (in case event was processed before this mounted)
-    const checkSession = async () => {
-      sessionCheckAttempts++
-      console.log(`🔍 Session check attempt ${sessionCheckAttempts}/${maxAttempts}`)
-      
-      try {
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-        
-        if (sessionError) {
-          console.error('❌ Session check error:', sessionError.message)
-          // Only show error after multiple attempts
-          if (sessionCheckAttempts >= maxAttempts) {
-            setStep('error')
-            setError('Invalid or expired reset link. Please request a new one.')
-            return
-          }
-        }
-        
-        if (session) {
-          console.log('✅ Session exists from reset link')
-          setStep('form')
-          return
-        }
-        
-        // If no session and we haven't hit max attempts, retry after a short delay
-        if (sessionCheckAttempts < maxAttempts) {
-          console.log('⏳ No session yet, retrying...')
-          setTimeout(checkSession, 300)
-        } else {
-          // Max attempts reached without finding a session
-          console.error('❌ Failed to establish session after maximum attempts')
-          // Check if there's an error in the URL that we can extract
-          const hash = window.location.hash
-          if (hash.includes('error_description')) {
-            const errorMatch = hash.match(/error_description=([^&]+)/)
-            if (errorMatch) {
-              const errorMsg = decodeURIComponent(errorMatch[1]).replace(/\+/g, ' ')
-              setError(`Reset link error: ${errorMsg}`)
-            } else {
-              setError('Invalid or expired reset link. Please request a new one.')
-            }
-          } else {
-            setError('Auth session missing! Please request a new password reset link.')
-          }
-          setStep('error')
-        }
-      } catch (err) {
-        console.error('Exception during session check:', err)
-        if (sessionCheckAttempts >= maxAttempts) {
-          setError('An error occurred while processing your reset link.')
-          setStep('error')
-        } else {
-          setTimeout(checkSession, 300)
-        }
+    // Fallback: if PASSWORD_RECOVERY already fired before this effect ran,
+    // check whether we have an active session right now
+    const bootstrap = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session && step === 'waiting') {
+        console.log('✅ Session found on bootstrap')
+        recoverySessionRef.current = session
+        setStep('form')
       }
     }
+    bootstrap()
 
-    // Start checking for session
-    checkSession()
+    // Timeout: if we still haven't transitioned after 8 s, show an error
+    const timeout = setTimeout(() => {
+      setStep((prev) => {
+        if (prev === 'waiting') {
+          setError('Invalid or expired reset link. Please request a new one.')
+          return 'error'
+        }
+        return prev
+      })
+    }, 8000)
 
     return () => {
       subscription.unsubscribe()
+      clearTimeout(timeout)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const validatePassword = (password: string): boolean => {
@@ -124,11 +85,7 @@ export default function ResetPasswordPage() {
     e.preventDefault()
     setError('')
 
-    // Validate passwords first
-    if (!validatePassword(newPassword)) {
-      return
-    }
-
+    if (!validatePassword(newPassword)) return
     if (newPassword !== confirmPassword) {
       setError('Passwords do not match')
       return
@@ -137,41 +94,49 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
+      // If the session was lost (e.g. a global SIGNED_OUT handler fired),
+      // restore it from the captured recovery session before updating the password.
+      const stored = recoverySessionRef.current
+      if (stored) {
+        const { error: setErr } = await supabase.auth.setSession({
+          access_token: stored.access_token,
+          refresh_token: stored.refresh_token,
+        })
+        if (setErr) {
+          console.warn('⚠️ Could not restore session:', setErr.message)
+          // Continue anyway — the session might still be alive server-side
+        } else {
+          console.log('✅ Session restored before updateUser')
+        }
+      }
+
       console.log('🔄 Updating password...')
-      
-      // Password recovery tokens don't require getUser() verification
-      // The token itself is the authorization - just attempt the update directly
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       })
 
       if (updateError) {
         console.error('❌ Password update failed:', updateError)
-        
-        // Provide specific error messages based on the error type
         if (updateError.message?.includes('session')) {
-          setError('Session expired. Please use a fresh reset link from your email.')
+          setError('Session expired. Please request a fresh reset link.')
         } else if (updateError.message?.includes('invalid')) {
           setError('Invalid reset link. Please request a new password reset.')
         } else {
           setError(updateError.message || 'Failed to reset password. Please try again.')
         }
-        
         setStep('error')
         toast.error(`Failed to reset password: ${updateError.message}`)
         setLoading(false)
         return
       }
 
-      // Success!
       console.log('✅ Password updated successfully')
       setStep('success')
       toast.success('Password reset successfully!')
 
-      // Sign them out so they log in with new password
+      // Sign out so the user logs in fresh with their new password
       await supabase.auth.signOut().catch(() => {})
 
-      // Redirect to login after 2 seconds
       setTimeout(() => {
         navigate('/auth', { replace: true })
       }, 2000)
@@ -253,7 +218,7 @@ export default function ResetPasswordPage() {
           background: rgba(99,102,241,0.05);
           box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
         }
-        
+
         .field-pw { position: relative; }
         .field-pw .field-input { padding-right: 2.75rem; }
         .pw-toggle {
@@ -333,10 +298,6 @@ export default function ResetPasswordPage() {
           margin-bottom: 1.5rem;
         }
 
-        .back-link {
-          text-align: center;
-          margin-top: 1.5rem;
-        }
         .back-link-btn {
           color: #818cf8;
           background: none;
@@ -431,9 +392,7 @@ export default function ResetPasswordPage() {
               >
                 {loading ? (
                   <>
-                    <span
-                      className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"
-                    />
+                    <span className="inline-block w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                     Resetting...
                   </>
                 ) : (
