@@ -13,16 +13,24 @@ if (!supabaseUrl || !supabaseAnonKey) {
   )
 }
 
-// Create custom storage that respects "Remember Me" preference
-// If user didn't check "Remember Me", use sessionStorage (cleared on close)
-// If user checked "Remember Me", use localStorage (persistent)
+// ─── Recovery Flow Guard ────────────────────────────────────────────────────
+// Set to true when a PASSWORD_RECOVERY event is received.
+// ConditionalStorage will refuse to removeItem() while this is true,
+// preventing the SIGNED_OUT cleanup from wiping the recovery session.
+let isPasswordRecoveryFlow = false
+
+export function setPasswordRecoveryFlow(active: boolean) {
+  isPasswordRecoveryFlow = active
+  console.log(`🔐 Password recovery flow: ${active ? 'ACTIVE' : 'inactive'}`)
+}
+
+// ─── Conditional Storage ────────────────────────────────────────────────────
+// If user checked "Remember Me", persist to localStorage; otherwise sessionStorage.
 class ConditionalStorage {
   private primaryStorage = localStorage
   private fallbackStorage = sessionStorage
 
   getItem(key: string): string | null {
-    // Try to find the item in either storage location
-    // This handles the case where tokens were saved before preference changed
     let value = this.primaryStorage.getItem(key)
     if (value === null) {
       value = this.fallbackStorage.getItem(key)
@@ -34,12 +42,19 @@ class ConditionalStorage {
     const rememberMe = localStorage.getItem('auth_remember_me') === 'true'
     const storage = rememberMe ? this.primaryStorage : this.fallbackStorage
     storage.setItem(key, value)
-    // Also clear from the other storage to avoid conflicts
+    // Clear from the other storage to avoid stale conflicts
     const otherStorage = rememberMe ? this.fallbackStorage : this.primaryStorage
     otherStorage.removeItem(key)
   }
 
   removeItem(key: string): void {
+    // CRITICAL: During password recovery, do NOT remove auth tokens.
+    // The SIGNED_OUT event fires after PASSWORD_RECOVERY and would otherwise
+    // wipe the session before the user can submit the new password form.
+    if (isPasswordRecoveryFlow) {
+      console.log(`🛡️ Recovery flow active — skipping removeItem("${key}")`)
+      return
+    }
     this.primaryStorage.removeItem(key)
     this.fallbackStorage.removeItem(key)
   }
@@ -60,28 +75,29 @@ export const supabase = createClient(
 )
 
 // ─── Auth State Change Listener ─────────────────────────────────────────────
-// Handle token refresh failures and session expiration
-// IMPORTANT: Keep this synchronous to avoid "message channel closed" errors
-// Any async work must happen WITHOUT returning true from the listener
 const authUnsubscribe = supabase.auth.onAuthStateChange((event, session) => {
-  // CRITICAL: Never interfere with password recovery flow
-  // PASSWORD_RECOVERY events contain valid recovery sessions that must not be cleared
   if (event === 'PASSWORD_RECOVERY') {
-    console.log('🔐 PASSWORD_RECOVERY in progress - skipping cleanup to preserve recovery session')
+    console.log('🔐 PASSWORD_RECOVERY in progress - activating recovery guard')
+    // Activate the storage guard so SIGNED_OUT can't wipe the session
+    setPasswordRecoveryFlow(true)
     return
   }
 
   if (event === 'SIGNED_OUT') {
-    // User explicitly signed out or session invalidated
+    // If we're in recovery flow, ignore this SIGNED_OUT — it's a side effect
+    // of Supabase clearing the old session when it receives the recovery token.
+    if (isPasswordRecoveryFlow) {
+      console.log('🛡️ Ignoring SIGNED_OUT during password recovery flow')
+      return
+    }
+
     console.log('✋ User signed out or session invalidated')
-    // Do NOT await here - execute async cleanup in background
     if (typeof window !== 'undefined') {
       Promise.resolve().then(async () => {
         try {
           const { useAuthStore } = await import('../store/authStore')
           const authStore = useAuthStore.getState()
           authStore.clearUser?.()
-          // Also clear cart when user logs out
           const { useCartStore } = await import('../store/cartStore')
           useCartStore.getState().clearCart?.()
         } catch {
@@ -92,7 +108,6 @@ const authUnsubscribe = supabase.auth.onAuthStateChange((event, session) => {
   }
 
   if (event === 'TOKEN_REFRESHED' && !session) {
-    // Token refresh failed — session is dead
     console.error('❌ Token refresh failed — session expired or invalid')
     if (typeof window !== 'undefined') {
       Promise.resolve().then(async () => {
@@ -100,13 +115,11 @@ const authUnsubscribe = supabase.auth.onAuthStateChange((event, session) => {
           const { useAuthStore } = await import('../store/authStore')
           const authStore = useAuthStore.getState()
           authStore.clearUser?.()
-          // Redirect to login only if not already on auth page
           const isAuthPage = window.location.pathname === '/auth' || window.location.pathname.startsWith('/auth/')
           if (!isAuthPage) {
             window.location.href = '/auth'
           }
         } catch {
-          // If auth import fails, still try to redirect safely
           const isAuthPage = window.location.pathname === '/auth' || window.location.pathname.startsWith('/auth/')
           if (!isAuthPage) {
             window.location.href = '/auth'
@@ -117,7 +130,6 @@ const authUnsubscribe = supabase.auth.onAuthStateChange((event, session) => {
   }
 
   if (event === 'USER_UPDATED' && !session) {
-    // Session became invalid during app usage
     console.warn('⚠️ Session became invalid during app usage')
     if (typeof window !== 'undefined') {
       Promise.resolve().then(async () => {
@@ -132,12 +144,10 @@ const authUnsubscribe = supabase.auth.onAuthStateChange((event, session) => {
   }
 })
 
-// Export the unsubscribe function so it can be called during cleanup if needed
 export function unsubscribeFromAuthChanges(): void {
   authUnsubscribe?.data?.subscription?.unsubscribe?.()
 }
 
-// ─── Error Detection Helper ────────────────────────────────────────────────
 export function isRefreshTokenExpired(error: unknown): boolean {
   if (!error) return false
   const err = error as { message?: string; status?: number }

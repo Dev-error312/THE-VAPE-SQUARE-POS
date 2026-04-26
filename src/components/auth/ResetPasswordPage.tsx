@@ -4,7 +4,6 @@ import { Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import toast from 'react-hot-toast'
 import AuthLayout from './AuthLayout'
-import type { Session } from '@supabase/supabase-js'
 
 type ResetStep = 'waiting' | 'form' | 'success' | 'error'
 
@@ -18,9 +17,9 @@ export default function ResetPasswordPage() {
   const [error, setError] = useState('')
   const [mounted, setMounted] = useState(false)
 
-  // Store the recovery session so we can restore it before updateUser
-  // even if a SIGNED_OUT event fires in between
-  const recoverySessionRef = useRef<Session | null>(null)
+  // Store raw tokens from the recovery event so we can re-set the session
+  // right before calling updateUser — bypassing ConditionalStorage entirely.
+  const recoveryTokensRef = useRef<{ access_token: string; refresh_token: string } | null>(null)
 
   const navigate = useNavigate()
 
@@ -30,65 +29,24 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     console.log('⏳ Waiting for PASSWORD_RECOVERY event...')
-    console.log('📍 URL:', window.location.href)
-
-    // PKCE flow: check if reset link has ?code= parameter (newer Supabase projects)
-    // Exchange the code for a session directly, bypassing the auth listener
-    const initPKCEFlow = async () => {
-      const params = new URLSearchParams(window.location.search)
-      const code = params.get('code')
-
-      if (code) {
-        console.log('🔐 PKCE flow detected — exchanging code for session...')
-        try {
-          const { data, error } = await supabase.auth.exchangeCodeForSession(code)
-          if (error) {
-            console.error('❌ Code exchange failed:', error.message)
-            setError('Invalid or expired reset link. Please request a new one.')
-            setStep('error')
-            return
-          }
-          if (data.session) {
-            console.log('✅ PKCE flow successful — session acquired')
-            recoverySessionRef.current = data.session
-            setStep('form')
-            setError('')
-            return
-          }
-        } catch (err) {
-          console.error('Exception during PKCE exchange:', err)
-        }
-      }
-    }
-
-    // Try PKCE first if applicable
-    initPKCEFlow()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('🔐 Auth state change:', event, 'Session:', !!session)
 
       if (event === 'PASSWORD_RECOVERY' && session) {
-        console.log('✅ PASSWORD_RECOVERY received — storing session')
-        // Capture the session; even if SIGNED_OUT fires later, we hold the reference
-        recoverySessionRef.current = session
+        console.log('✅ PASSWORD_RECOVERY received — storing raw tokens')
+        // Store tokens directly in a ref — NOT via supabase storage layer,
+        // so ConditionalStorage.removeItem() can never wipe them.
+        recoveryTokensRef.current = {
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+        }
         setStep('form')
         setError('')
       }
     })
 
-    // Fallback: if PASSWORD_RECOVERY already fired before this effect ran,
-    // check whether we have an active session right now
-    const bootstrap = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session && step === 'waiting') {
-        console.log('✅ Session found on bootstrap')
-        recoverySessionRef.current = session
-        setStep('form')
-      }
-    }
-    bootstrap()
-
-    // Timeout: if we still haven't transitioned after 8 s, show an error
+    // Timeout: if no PASSWORD_RECOVERY after 8s, show error
     const timeout = setTimeout(() => {
       setStep((prev) => {
         if (prev === 'waiting') {
@@ -103,7 +61,6 @@ export default function ResetPasswordPage() {
       subscription.unsubscribe()
       clearTimeout(timeout)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const validatePassword = (password: string): boolean => {
@@ -127,23 +84,36 @@ export default function ResetPasswordPage() {
     setLoading(true)
 
     try {
-      // If the session was lost (e.g. a global SIGNED_OUT handler fired),
-      // restore it from the captured recovery session before updating the password.
-      const stored = recoverySessionRef.current
-      if (stored) {
-        const { error: setErr } = await supabase.auth.setSession({
-          access_token: stored.access_token,
-          refresh_token: stored.refresh_token,
-        })
-        if (setErr) {
-          console.warn('⚠️ Could not restore session:', setErr.message)
-          // Continue anyway — the session might still be alive server-side
-        } else {
-          console.log('✅ Session restored before updateUser')
-        }
+      const tokens = recoveryTokensRef.current
+
+      if (!tokens) {
+        setError('Recovery session lost. Please use a fresh reset link.')
+        setStep('error')
+        setLoading(false)
+        return
       }
 
-      console.log('🔄 Updating password...')
+      // Re-inject the session directly into the Supabase client in-memory.
+      // This bypasses ConditionalStorage (which removeItem() may have cleared)
+      // and gives us a live authenticated session for updateUser.
+      console.log('🔄 Re-injecting recovery session...')
+      const { error: sessionError } = await supabase.auth.setSession({
+        access_token: tokens.access_token,
+        refresh_token: tokens.refresh_token,
+      })
+
+      if (sessionError) {
+        console.error('❌ Failed to restore session:', sessionError.message)
+        // The access_token has expired (they're short-lived, ~1hr).
+        // The only recovery at this point is a fresh reset link.
+        setError('Your reset link has expired. Please request a new password reset.')
+        setStep('error')
+        toast.error('Reset link expired — please request a new one.')
+        setLoading(false)
+        return
+      }
+
+      console.log('✅ Session restored — updating password...')
       const { error: updateError } = await supabase.auth.updateUser({
         password: newPassword,
       })
@@ -164,10 +134,11 @@ export default function ResetPasswordPage() {
       }
 
       console.log('✅ Password updated successfully')
+      recoveryTokensRef.current = null
       setStep('success')
       toast.success('Password reset successfully!')
 
-      // Sign out so the user logs in fresh with their new password
+      // Sign out so they log in fresh with the new password
       await supabase.auth.signOut().catch(() => {})
 
       setTimeout(() => {
