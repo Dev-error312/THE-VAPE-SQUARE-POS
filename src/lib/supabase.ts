@@ -64,6 +64,13 @@ export const supabase = createClient(
 // IMPORTANT: Keep this synchronous to avoid "message channel closed" errors
 // Any async work must happen WITHOUT returning true from the listener
 const authUnsubscribe = supabase.auth.onAuthStateChange((event, session) => {
+  // CRITICAL: Never interfere with password recovery flow
+  // PASSWORD_RECOVERY events contain valid recovery sessions that must not be cleared
+  if (event === 'PASSWORD_RECOVERY') {
+    console.log('🔐 PASSWORD_RECOVERY in progress - skipping cleanup to preserve recovery session')
+    return
+  }
+
   if (event === 'SIGNED_OUT') {
     // User explicitly signed out or session invalidated
     console.log('✋ User signed out or session invalidated')

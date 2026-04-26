@@ -30,6 +30,39 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     console.log('⏳ Waiting for PASSWORD_RECOVERY event...')
+    console.log('📍 URL:', window.location.href)
+
+    // PKCE flow: check if reset link has ?code= parameter (newer Supabase projects)
+    // Exchange the code for a session directly, bypassing the auth listener
+    const initPKCEFlow = async () => {
+      const params = new URLSearchParams(window.location.search)
+      const code = params.get('code')
+
+      if (code) {
+        console.log('🔐 PKCE flow detected — exchanging code for session...')
+        try {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+          if (error) {
+            console.error('❌ Code exchange failed:', error.message)
+            setError('Invalid or expired reset link. Please request a new one.')
+            setStep('error')
+            return
+          }
+          if (data.session) {
+            console.log('✅ PKCE flow successful — session acquired')
+            recoverySessionRef.current = data.session
+            setStep('form')
+            setError('')
+            return
+          }
+        } catch (err) {
+          console.error('Exception during PKCE exchange:', err)
+        }
+      }
+    }
+
+    // Try PKCE first if applicable
+    initPKCEFlow()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('🔐 Auth state change:', event, 'Session:', !!session)
